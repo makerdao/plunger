@@ -1,0 +1,4 @@
+#!/bin/sh
+dir="$(dirname "$0")"/..
+export PYTHONPATH=$PYTHONPATH:$dir
+python3 -m plunger.plunger $@
