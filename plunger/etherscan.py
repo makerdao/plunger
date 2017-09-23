@@ -15,12 +15,18 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from plunger.etherscan import Etherscan
+from lxml import html
+import requests
 
 
-if __name__ == "__main__":
-    etherscan = Etherscan()
-    txs = etherscan.list_pending_txs('0xc4522328d5467d90a8d2cd8391dd3aa5b53e02b0')
-    print(txs)
-    for tx in txs:
-        print(etherscan.tx_nonce(tx))
+class Etherscan:
+    def list_pending_txs(self, address) -> list:
+        page = requests.get(f"https://etherscan.io/txsPending?a={address}")
+        tree = html.fromstring(page.content)
+        tx_ids = tree.xpath('//table[contains(@class,"table")]/tbody//td[1]/span[@class="address-tag"]/a/text()')
+        return tx_ids
+
+    def tx_nonce(self, tx_id) -> int:
+        page = requests.get(f"https://etherscan.io/tx/{tx_id}")
+        tree = html.fromstring(page.content)
+        return int(tree.xpath('//span[contains(@title,"The transaction nonce")]/text()')[0].strip())
