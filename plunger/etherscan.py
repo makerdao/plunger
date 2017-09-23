@@ -20,13 +20,21 @@ import requests
 
 
 class Etherscan:
+    def __init__(self, chain):
+        if chain == "ethlive":
+            self.url = "etherscan.io"
+        elif chain == "kovan":
+            self.url = "kovan.etherscan.io"
+        else:
+            raise Exception("Chain not supported by Etherscan!")
+
     def list_pending_txs(self, address) -> list:
-        page = requests.get(f"https://etherscan.io/txsPending?a={address}")
+        page = requests.get(f"https://{self.url}/txsPending?a={address}")
         tree = html.fromstring(page.content)
         tx_ids = tree.xpath('//table[contains(@class,"table")]/tbody//td[1]/span[@class="address-tag"]/a/text()')
         return tx_ids
 
     def tx_nonce(self, tx_id) -> int:
-        page = requests.get(f"https://etherscan.io/tx/{tx_id}")
+        page = requests.get(f"https://{self.url}/tx/{tx_id}")
         tree = html.fromstring(page.content)
         return int(tree.xpath('//span[contains(@title,"The transaction nonce")]/text()')[0].strip())

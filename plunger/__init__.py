@@ -14,13 +14,3 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-from plunger.etherscan import Etherscan
-
-
-if __name__ == "__main__":
-    etherscan = Etherscan()
-    txs = etherscan.list_pending_txs('0xc4522328d5467d90a8d2cd8391dd3aa5b53e02b0')
-    print(txs)
-    for tx in txs:
-        print(etherscan.tx_nonce(tx))
