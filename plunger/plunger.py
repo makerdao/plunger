@@ -60,18 +60,31 @@ class Plunger:
             self.logger.info(f"There are no pending transactions from this address according to Etherscan")
         else:
             self.logger.info(f"There are {len(tx_ids)} pending transactions from this address: {tx_ids}")
+            self.logger.info(f"")
 
-            if self.arguments.wait:
-                #TODO checking Etherscan.io once every ten seconds is probably not the best idea
-                #TODO as we can just look at `getTransactionCount` to see if the transactions
-                #TODO get mined or not
-                #
-                #TODO having said that, checking Etherscan.io once a while can be useful as
-                #TODO we may discover the pending transactions have disappeared :)
-                while len(self.pending_transactions()) > 0:
-                    time.sleep(10)
+            if self.arguments.override:
+                self.override()
 
-            self.logger.info(f"Pending transactions have been cleared")
+            if self.arguments.override or self.arguments.wait:
+                self.wait()
+
+    def override(self):
+        self.logger.info(f"Transaction overriding is not implemented yet")
+        exit(-1)
+
+    def wait(self):
+        self.logger.info(f"Waiting for the transactions to get mined...")
+
+        #TODO checking Etherscan.io once every ten seconds is probably not the best idea
+        #TODO as we can just look at `getTransactionCount` to see if the transactions
+        #TODO get mined or not
+        #
+        #TODO having said that, checking Etherscan.io once a while can be useful as
+        #TODO we may discover the pending transactions have disappeared :)
+        while len(self.pending_transactions()) > 0:
+            time.sleep(10)
+
+        self.logger.info(f"All pending transactions have been mined")
 
     def chain(self) -> str:
         block_0 = self.web3.eth.getBlock(0)['hash']
