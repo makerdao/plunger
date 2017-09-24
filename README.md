@@ -46,7 +46,27 @@ export LDFLAGS="-L$(brew --prefix openssl)/lib" CFLAGS="-I$(brew --prefix openss
 ```
 
 
-## Listing pending transactions
+## Usage
+
+```
+usage: plunger [-h] [--rpc-host RPC_HOST] [--rpc-port RPC_PORT]
+               (--list | --wait | --override-with-zero-txs)
+               address
+
+positional arguments:
+  address               Ethereum address to operate on
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --rpc-host RPC_HOST   JSON-RPC host (default: `localhost')
+  --rpc-port RPC_PORT   JSON-RPC port (default: `8545')
+  --list                List pending transactions
+  --wait                Wait for the pending transactions to clear
+  --override-with-zero-txs
+                        Override the pending transactions with zero-value txs
+```
+
+### Listing pending transactions
 
 **TODO This feature is not implemented yet!**
 
@@ -54,8 +74,7 @@ export LDFLAGS="-L$(brew --prefix openssl)/lib" CFLAGS="-I$(brew --prefix openss
 bin/plunger --list 0x0101010101010101010101010101010101010101
 ```
 
-
-## Waiting for pending transactions to clear
+### Waiting for pending transactions to clear
 
 If you want _plunger_ to just wait for the pending transactions from the specified address
 to get processed by the network (i.e. to get mined), run it with the `--wait` argument:
@@ -71,8 +90,7 @@ _Plunger_ will not terminate until all pending transactions get mined. If it for
 reason (the Ethereum node going down or some other network connectivity issues) terminates earlier
 than that, it will return a non-zero return code.
 
-
-## Overriding pending transactions
+### Overriding pending transactions
 
 **TODO This feature is not implemented yet!**
 
@@ -97,7 +115,7 @@ address get mined, it will return a non-zero return code.
 The account specified has to be unlocked for _plunger_ to be able to sign and send replacement
 transactions. If it's unable to do so, it will terminate immediately with a non-zero return code.
 
-### Gas price used
+### Gas price
 
 By default, _plunger_ will use the default gas price suggested by the Ethereum node it is
 connected to. If that gas price is lower than the one the pending transactions have used,
@@ -106,9 +124,15 @@ _pluger_ will increase it by 1 Wei.
 **TODO This feature is not implemented yet!** In the future it will be possible to specify
 a custom gas price or use a service like _ethgasstation_.
 
-### Zero Wei ether transfer transaction used
+### Pending transactions source
 
-**TODO This subsection will describe transaction that plunger overrides with**
+By default, _plunger_ uses _etherscan.io_ to discover pending transactions. In the future
+versions it will be also capable of monitoring the transaction pool of the Ethereum node
+it is connected to. It will also allow configuring the source i.e. choosing whether
+we want to use _etherscan.io_, local transaction pool or both.
+
+Unfortunately, the API exposed by _etherscan.io_ does not give access to pending transactions.
+Due to that, integration works by simply scraping their website.
 
 
 ## License
