@@ -55,6 +55,12 @@ class Plunger:
             self.logger.info(f"There are {len(tx_ids)} pending transactions from this address: {tx_ids}")
 
             if self.arguments.wait:
+                #TODO checking Etherscan.io once every ten seconds is probably not the best idea
+                #TODO as we can just look at `getTransactionCount` to see if the transactions
+                #TODO get mined or not
+                #
+                #TODO having said that, checking Etherscan.io once a while can be useful as
+                #TODO we may discover the pending transactions have disappeared :)
                 while len(self.pending_transactions()) > 0:
                     time.sleep(10)
 
