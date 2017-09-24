@@ -30,12 +30,19 @@ class Plunger:
     logger = logging.getLogger('plunger')
 
     def __init__(self):
+        # Define basic arguments
         parser = argparse.ArgumentParser(prog='plunger')
         parser.add_argument("address", help="Ethereum address to operate on", type=str)
         parser.add_argument("--rpc-host", help="JSON-RPC host (default: `localhost')", default="localhost", type=str)
         parser.add_argument("--rpc-port", help="JSON-RPC port (default: `8545')", default=8545, type=int)
+
+        # Define mutually exclusive action arguments
         action = parser.add_mutually_exclusive_group(required=True)
+        action.add_argument('--list', help="List pending transactions", dest='list', action='store_true')
         action.add_argument('--wait', help="Wait for the pending transactions to clear", dest='wait', action='store_true')
+        action.add_argument('--override-with-zero-txs', help="Override the pending transactions with zero-value txs", dest='override', action='store_true')
+
+        # Parse the arguments, initialize web3.py
         self.arguments = parser.parse_args()
         self.web3 = Web3(HTTPProvider(endpoint_uri=f"http://{self.arguments.rpc_host}:{self.arguments.rpc_port}"))
         self.web3.eth.defaultAccount = self.arguments.address
