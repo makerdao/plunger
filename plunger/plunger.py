@@ -31,9 +31,9 @@ class Plunger:
 
     def __init__(self):
         parser = argparse.ArgumentParser(prog='plunger')
+        parser.add_argument("address", help="Ethereum address to operate on", type=str)
         parser.add_argument("--rpc-host", help="JSON-RPC host (default: `localhost')", default="localhost", type=str)
         parser.add_argument("--rpc-port", help="JSON-RPC port (default: `8545')", default=8545, type=int)
-        parser.add_argument("--address", help="Ethereum address", required=True, type=str)
         action = parser.add_mutually_exclusive_group(required=True)
         action.add_argument('--wait', help="Wait for the pending transactions to clear", dest='wait', action='store_true')
         self.arguments = parser.parse_args()
