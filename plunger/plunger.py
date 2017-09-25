@@ -49,30 +49,29 @@ class Plunger:
 
     def main(self):
         # Get pending transactions
-        pending_transactions = self.get_pending_transactions()
+        transactions = self.get_pending_transactions()
 
         # List pending transactions, alternatively say there are none
-        self.list(pending_transactions)
+        self.list(transactions)
 
         # If there is at least one pending transaction...
-        if len(pending_transactions) > 0:
+        if len(transactions) > 0:
             # ...if called with `--override-with-zero-txs`, all of them to clear
             if self.arguments.override:
-                self.override()
+                self.override(transactions)
 
             # ...if called with either `--override-with-zero-txs` or `--wait`, wait for all of them to clear
             if self.arguments.override or self.arguments.wait:
-                self.wait()
+                self.wait(transactions)
 
     def list(self, transactions):
         # Print the number of pending transactions
         if len(transactions) == 0:
-            message = "There are no pending transactions"
+            print("There are no pending transactions on {self.chain()} from {self.web3.eth.defaultAccount}")
         elif len(transactions) == 1:
-            message = "There is 1 pending transaction"
+            print("There is 1 pending transaction on {self.chain()} from {self.web3.eth.defaultAccount}:")
         else:
-            message = f"There are {len(transactions)} pending transactions"
-        print(f"{message} on {self.chain()} from {self.web3.eth.defaultAccount}:")
+            print(f"There are {len(transactions)} pending transactions on {self.chain()} from {self.web3.eth.defaultAccount}:")
 
         # Print the table with pending transactions, if there are any
         if len(transactions) > 0:
@@ -85,11 +84,11 @@ class Plunger:
             print("")
             print(table.draw())
 
-    def override(self):
+    def override(self, transactions):
         print(f"Transaction overriding is not implemented yet")
         exit(-1)
 
-    def wait(self):
+    def wait(self, transactions):
         print(f"Waiting for the transactions to get mined...")
 
         #TODO checking Etherscan.io once every ten seconds is probably not the best idea
@@ -124,11 +123,13 @@ class Plunger:
         return self.web3.eth.getTransactionCount(self.web3.eth.defaultAccount)-1
 
     def get_pending_transactions(self) -> list:
-        last_nonce = self.get_last_nonce()
+        # Get the list of pending transactions and their details from etherscan.io
         etherscan = Etherscan(self.chain())
         txs = etherscan.list_pending_txs(self.web3.eth.defaultAccount)
-        filter(lambda tx: tx.nonce > last_nonce, txs)
-        return txs
+
+        # Ignore these which have been already mined
+        last_nonce = self.get_last_nonce()
+        return list(filter(lambda tx: tx.nonce > last_nonce, txs))
 
 
 if __name__ == "__main__":
