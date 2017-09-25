@@ -84,21 +84,18 @@ class Plunger:
             print("")
             print(table.draw())
 
-    def override(self, transactions):
+    def override(self, transactions: list):
         print(f"Transaction overriding is not implemented yet")
         exit(-1)
 
-    def wait(self, transactions):
+    def wait(self, transactions: list):
+        print(f"")
         print(f"Waiting for the transactions to get mined...")
 
-        #TODO checking Etherscan.io once every ten seconds is probably not the best idea
-        #TODO as we can just look at `getTransactionCount` to see if the transactions
-        #TODO get mined or not
-        #
-        #TODO having said that, checking Etherscan.io once a while can be useful as
-        #TODO we may discover the pending transactions have disappeared :)
-        while len(self.get_pending_transactions()) > 0:
-            time.sleep(10)
+        # When `get_last_nonce()` stops being lower than the highest pending nonce,
+        # it means all pending transactions or their replacements have been mined
+        while self.get_last_nonce() < max(transactions, lambda tx: tx.nonce):
+            time.sleep(5)
 
         print(f"All pending transactions have been mined")
 
