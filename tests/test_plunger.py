@@ -53,7 +53,7 @@ class TestPlunger:
         assert "usage: plunger" in err.getvalue()
         assert "error: the following arguments are required: address" in err.getvalue()
 
-    def test_should_print_usage_only_address_specified(self):
+    def test_should_print_usage_when_only_address_specified(self):
         # when
         with captured_output() as (out, err):
             with pytest.raises(SystemExit):
