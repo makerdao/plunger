@@ -27,8 +27,6 @@ from plunger.etherscan import Etherscan
 
 
 class Plunger:
-    logger = logging.getLogger('plunger')
-
     def __init__(self):
         # Define basic arguments
         parser = argparse.ArgumentParser(prog='plunger')
