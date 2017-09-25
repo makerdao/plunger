@@ -124,12 +124,11 @@ class Plunger:
 
     def get_pending_transactions(self) -> list:
         # Get the list of pending transactions and their details from etherscan.io
-        etherscan = Etherscan(self.chain())
-        txs = etherscan.list_pending_txs(self.web3.eth.defaultAccount)
+        transactions = Etherscan(self.chain()).list_pending_txs(self.web3.eth.defaultAccount)
 
         # Ignore these which have been already mined
         last_nonce = self.get_last_nonce()
-        return list(filter(lambda tx: tx.nonce > last_nonce, txs))
+        return list(filter(lambda tx: tx.nonce > last_nonce, transactions))
 
 
 if __name__ == "__main__":
