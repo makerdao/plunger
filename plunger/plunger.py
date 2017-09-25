@@ -65,18 +65,24 @@ class Plunger:
                 self.wait()
 
     def list(self, transactions):
+        # Print the number of pending transactions
         if len(transactions) == 0:
-            print(f"There are no pending transactions on {self.chain()} from {self.web3.eth.defaultAccount}")
+            message = "There are no pending transactions"
+        elif len(transactions) == 1:
+            message = "There is 1 pending transaction"
         else:
-            print(f"There are {len(transactions)} pending transactions on {self.chain()} from {self.web3.eth.defaultAccount}:")
-            print(f"")
+            message = f"There are {len(transactions)} pending transactions"
+        print(f"{message} on {self.chain()} from {self.web3.eth.defaultAccount}:")
 
+        # Print the table with pending transactions, if there are any
+        if len(transactions) > 0:
             table = Texttable()
             table.set_deco(Texttable.HEADER)
             table.set_cols_dtype(['t', 'i'])
             table.set_cols_align(["l", "r"])
             table.add_rows([["TxHash", "Nonce"]] + list(map(lambda tx: [tx.tx_hash, tx.nonce], transactions)))
 
+            print("")
             print(table.draw())
 
     def override(self):
