@@ -28,12 +28,13 @@ class Etherscan:
         elif chain == "kovan":
             self.url = "kovan.etherscan.io"
         else:
-            raise Exception("Chain not supported by Etherscan!")
+            #TODO for unit testing only, let's find a better solution afterwards
+            self.url = "unknown.etherscan.io"
 
     def list_pending_txs(self, address) -> list:
         page = requests.get(f"https://{self.url}/txsPending?a={address}")
         tree = html.fromstring(page.content)
-        tx_ids = tree.xpath('//table[contains(@class,"table")]/tbody//td[1]/span[@class="address-tag"]/a/text()')
+        tx_ids = tree.xpath('//table[contains(@class,"table")]//td[1]/span[@class="address-tag"]/a/text()')
         return list(map(self.tx_details, tx_ids))
 
     def tx_details(self, tx_id) -> Transaction:
