@@ -15,8 +15,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from lxml import html
 import requests
+from lxml import html
 
 from plunger.transaction import Transaction
 

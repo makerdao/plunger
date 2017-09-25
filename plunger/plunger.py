@@ -16,8 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import argparse
-import logging
-
+import sys
 import time
 
 from texttable import Texttable
@@ -27,7 +26,7 @@ from plunger.etherscan import Etherscan
 
 
 class Plunger:
-    def __init__(self):
+    def __init__(self, args: list):
         # Define basic arguments
         parser = argparse.ArgumentParser(prog='plunger')
         parser.add_argument("address", help="Ethereum address to check for pending transactions", type=str)
@@ -41,7 +40,7 @@ class Plunger:
         action.add_argument('--override-with-zero-txs', help="Override the pending transactions with zero-value txs", dest='override', action='store_true')
 
         # Parse the arguments, initialize web3.py
-        self.arguments = parser.parse_args()
+        self.arguments = parser.parse_args(args)
         self.web3 = Web3(HTTPProvider(endpoint_uri=f"http://{self.arguments.rpc_host}:{self.arguments.rpc_port}"))
         self.web3.eth.defaultAccount = self.arguments.address
 
@@ -130,4 +129,4 @@ class Plunger:
 
 
 if __name__ == "__main__":
-    Plunger().main()
+    Plunger(sys.argv[1:]).main()
