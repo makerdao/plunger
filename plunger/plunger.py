@@ -48,8 +48,6 @@ class Plunger:
         self.web3.eth.defaultAccount = self.arguments.address
 
     def main(self):
-        self.wait_for_sync()
-
         # Get pending transactions
         pending_transactions = self.get_pending_transactions()
 
@@ -115,19 +113,6 @@ class Plunger:
             return "morden"
         else:
             return "unknown"
-
-    def wait_for_sync(self):
-        # wait for the client to have at least one peer
-        if self.web3.net.peerCount == 0:
-            print(f"Waiting for the node to have at least one peer...")
-            while self.web3.net.peerCount == 0:
-                time.sleep(0.25)
-
-        # wait for the client to sync completely
-        if self.web3.eth.syncing:
-            print(f"Waiting for the node to sync...")
-            while self.web3.eth.syncing:
-                time.sleep(0.25)
 
     def get_last_nonce(self):
         return self.web3.eth.getTransactionCount(self.web3.eth.defaultAccount)-1
