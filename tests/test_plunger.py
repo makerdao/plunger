@@ -38,13 +38,27 @@ def captured_output():
         sys.stdout, sys.stderr = old_out, old_err
 
 
+def args(arguments):
+    return arguments.split()
+
+
 class TestPlunger:
     def test_should_print_usage_when_no_arguments(self):
         # when
         with captured_output() as (out, err):
             with pytest.raises(SystemExit):
-                Plunger(list()).main()
+                Plunger(args('')).main()
 
         # then
         assert "usage: plunger" in err.getvalue()
         assert "error: the following arguments are required: address" in err.getvalue()
+
+    def test_should_print_usage_only_address_specified(self):
+        # when
+        with captured_output() as (out, err):
+            with pytest.raises(SystemExit):
+                Plunger(args('0x0000011111222223333322222111110000099999')).main()
+
+        # then
+        assert "usage: plunger" in err.getvalue()
+        assert "error: one of the arguments --list --wait --override-with-zero-txs is required" in err.getvalue()
