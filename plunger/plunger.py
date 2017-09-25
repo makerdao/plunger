@@ -67,9 +67,9 @@ class Plunger:
     def list(self, transactions):
         # Print the number of pending transactions
         if len(transactions) == 0:
-            print("There are no pending transactions on {self.chain()} from {self.web3.eth.defaultAccount}")
+            print(f"There are no pending transactions on {self.chain()} from {self.web3.eth.defaultAccount}")
         elif len(transactions) == 1:
-            print("There is 1 pending transaction on {self.chain()} from {self.web3.eth.defaultAccount}:")
+            print(f"There is 1 pending transaction on {self.chain()} from {self.web3.eth.defaultAccount}:")
         else:
             print(f"There are {len(transactions)} pending transactions on {self.chain()} from {self.web3.eth.defaultAccount}:")
 
