@@ -68,7 +68,8 @@ optional arguments:
 
 ### Listing pending transactions
 
-**TODO This feature is not implemented yet!**
+If you want _plunger_ to only list pending transactions originating from the specified address,
+call it with the `--list` argument:
 
 ```bash
 bin/plunger --list 0x0101010101010101010101010101010101010101
