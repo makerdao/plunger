@@ -125,7 +125,10 @@ class Plunger:
 
         # Ignore these which have been already mined
         last_nonce = self.get_last_nonce()
-        return list(filter(lambda tx: tx.nonce > last_nonce, transactions))
+        transactions = filter(lambda tx: tx.nonce > last_nonce, transactions)
+
+        # Sort by nonce and tx_hash
+        return sorted(transactions, key=lambda tx: (tx.nonce, tx.tx_hash))
 
 
 if __name__ == "__main__":
