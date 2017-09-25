@@ -20,7 +20,7 @@ import logging
 
 import time
 
-import web3
+from texttable import Texttable
 from web3 import Web3, HTTPProvider
 
 from plunger.etherscan import Etherscan
@@ -32,7 +32,7 @@ class Plunger:
     def __init__(self):
         # Define basic arguments
         parser = argparse.ArgumentParser(prog='plunger')
-        parser.add_argument("address", help="Ethereum address to operate on", type=str)
+        parser.add_argument("address", help="Ethereum address to check for pending transactions", type=str)
         parser.add_argument("--rpc-host", help="JSON-RPC host (default: `localhost')", default="localhost", type=str)
         parser.add_argument("--rpc-port", help="JSON-RPC port (default: `8545')", default=8545, type=int)
 
@@ -47,37 +47,46 @@ class Plunger:
         self.web3 = Web3(HTTPProvider(endpoint_uri=f"http://{self.arguments.rpc_host}:{self.arguments.rpc_port}"))
         self.web3.eth.defaultAccount = self.arguments.address
 
-        # Initialize logging
-        # logging.basicConfig(format='%(message)s', level=logging.INFO)
-        logging.basicConfig(format='%(asctime)-15s %(levelname)-8s %(name)-8s %(message)s', level=logging.INFO)
-
     def main(self):
-        self.logger.info(f"Plunger on {self.chain()}, connected to {self.web3.currentProvider.endpoint_uri}")
         self.wait_for_sync()
-        self.logger.info(f"Checking for pending transactions from {self.web3.eth.defaultAccount}")
 
-        tx_ids = self.get_pending_transactions()
-        if len(tx_ids) == 0:
-            self.logger.info(f"There are no pending transactions from this address according to Etherscan")
-        else:
-            #TODO extract to list() method
-            self.logger.info(f"There are {len(tx_ids)} pending transactions from this address: {tx_ids}")
-            self.logger.info(f"")
+        # Get pending transactions
+        pending_transactions = self.get_pending_transactions()
 
-            # If called with `--override-with-zero-txs`, override all pending transactions
+        # List pending transactions, alternatively say there are none
+        self.list(pending_transactions)
+
+        # If there is at least one pending transaction...
+        if len(pending_transactions) > 0:
+            # ...if called with `--override-with-zero-txs`, all of them to clear
             if self.arguments.override:
                 self.override()
 
-            # If called with either `--override-with-zero-txs` or `--wait`, wait for all pending transactions
+            # ...if called with either `--override-with-zero-txs` or `--wait`, wait for all of them to clear
             if self.arguments.override or self.arguments.wait:
                 self.wait()
 
+    def list(self, transactions):
+        if len(transactions) == 0:
+            print(f"There are no pending transactions on {self.chain()} from {self.web3.eth.defaultAccount}")
+        else:
+            print(f"There are {len(transactions)} pending transactions on {self.chain()} from {self.web3.eth.defaultAccount}:")
+            print(f"")
+
+            table = Texttable()
+            table.set_deco(Texttable.HEADER)
+            table.set_cols_dtype(['t', 'i'])
+            table.set_cols_align(["l", "r"])
+            table.add_rows([["TxHash", "Nonce"]] + list(map(lambda tx: [tx.tx_hash, tx.nonce], transactions)))
+
+            print(table.draw())
+
     def override(self):
-        self.logger.info(f"Transaction overriding is not implemented yet")
+        print(f"Transaction overriding is not implemented yet")
         exit(-1)
 
     def wait(self):
-        self.logger.info(f"Waiting for the transactions to get mined...")
+        print(f"Waiting for the transactions to get mined...")
 
         #TODO checking Etherscan.io once every ten seconds is probably not the best idea
         #TODO as we can just look at `getTransactionCount` to see if the transactions
@@ -88,7 +97,7 @@ class Plunger:
         while len(self.get_pending_transactions()) > 0:
             time.sleep(10)
 
-        self.logger.info(f"All pending transactions have been mined")
+        print(f"All pending transactions have been mined")
 
     def chain(self) -> str:
         block_0 = self.web3.eth.getBlock(0)['hash']
@@ -110,24 +119,24 @@ class Plunger:
     def wait_for_sync(self):
         # wait for the client to have at least one peer
         if self.web3.net.peerCount == 0:
-            self.logger.info(f"Waiting for the node to have at least one peer...")
+            print(f"Waiting for the node to have at least one peer...")
             while self.web3.net.peerCount == 0:
                 time.sleep(0.25)
 
         # wait for the client to sync completely
         if self.web3.eth.syncing:
-            self.logger.info(f"Waiting for the node to sync...")
+            print(f"Waiting for the node to sync...")
             while self.web3.eth.syncing:
                 time.sleep(0.25)
 
     def get_last_nonce(self):
         return self.web3.eth.getTransactionCount(self.web3.eth.defaultAccount)-1
 
-    def get_pending_transactions(self):
+    def get_pending_transactions(self) -> list:
         last_nonce = self.get_last_nonce()
         etherscan = Etherscan(self.chain())
         txs = etherscan.list_pending_txs(self.web3.eth.defaultAccount)
-        filter(lambda tx: etherscan.tx_nonce(tx) > last_nonce, txs)
+        filter(lambda tx: tx.nonce > last_nonce, txs)
         return txs
 
 
