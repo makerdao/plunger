@@ -1,4 +1,4 @@
-# This file is part of Maker Keeper Framework.
+# This file is part of Plunger.
 #
 # Copyright (C) 2017 reverendus
 #
