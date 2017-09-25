@@ -47,24 +47,28 @@ class Plunger:
         self.web3 = Web3(HTTPProvider(endpoint_uri=f"http://{self.arguments.rpc_host}:{self.arguments.rpc_port}"))
         self.web3.eth.defaultAccount = self.arguments.address
 
-    def run(self):
+        # Initialize logging
         # logging.basicConfig(format='%(message)s', level=logging.INFO)
         logging.basicConfig(format='%(asctime)-15s %(levelname)-8s %(name)-8s %(message)s', level=logging.INFO)
 
+    def main(self):
         self.logger.info(f"Plunger on {self.chain()}, connected to {self.web3.currentProvider.endpoint_uri}")
         self.wait_for_sync()
         self.logger.info(f"Checking for pending transactions from {self.web3.eth.defaultAccount}")
 
-        tx_ids = self.pending_transactions()
+        tx_ids = self.get_pending_transactions()
         if len(tx_ids) == 0:
             self.logger.info(f"There are no pending transactions from this address according to Etherscan")
         else:
+            #TODO extract to list() method
             self.logger.info(f"There are {len(tx_ids)} pending transactions from this address: {tx_ids}")
             self.logger.info(f"")
 
+            # If called with `--override-with-zero-txs`, override all pending transactions
             if self.arguments.override:
                 self.override()
 
+            # If called with either `--override-with-zero-txs` or `--wait`, wait for all pending transactions
             if self.arguments.override or self.arguments.wait:
                 self.wait()
 
@@ -81,7 +85,7 @@ class Plunger:
         #
         #TODO having said that, checking Etherscan.io once a while can be useful as
         #TODO we may discover the pending transactions have disappeared :)
-        while len(self.pending_transactions()) > 0:
+        while len(self.get_pending_transactions()) > 0:
             time.sleep(10)
 
         self.logger.info(f"All pending transactions have been mined")
@@ -116,8 +120,11 @@ class Plunger:
             while self.web3.eth.syncing:
                 time.sleep(0.25)
 
-    def pending_transactions(self):
-        last_nonce = self.web3.eth.getTransactionCount(self.web3.eth.defaultAccount)-1
+    def get_last_nonce(self):
+        return self.web3.eth.getTransactionCount(self.web3.eth.defaultAccount)-1
+
+    def get_pending_transactions(self):
+        last_nonce = self.get_last_nonce()
         etherscan = Etherscan(self.chain())
         txs = etherscan.list_pending_txs(self.web3.eth.defaultAccount)
         filter(lambda tx: etherscan.tx_nonce(tx) > last_nonce, txs)
@@ -125,4 +132,4 @@ class Plunger:
 
 
 if __name__ == "__main__":
-    Plunger().run()
+    Plunger().main()
