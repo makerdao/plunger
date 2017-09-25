@@ -17,10 +17,10 @@
 
 import os
 import sys
+from contextlib import contextmanager
 from io import StringIO
 
 import pytest
-from decorator import contextmanager
 
 sys.path.append(os.path.dirname(__file__) + "/..")
 
