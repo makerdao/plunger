@@ -92,7 +92,7 @@ class Plunger:
         # When `get_last_nonce()` stops being lower than the highest pending nonce,
         # it means all pending transactions or their replacements have been mined
         while self.get_last_nonce() < max(transactions, key=lambda tx: tx.nonce).nonce:
-            time.sleep(5)
+            time.sleep(1)
 
         print(f"All pending transactions have been mined")
 
