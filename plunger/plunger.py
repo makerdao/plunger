@@ -37,7 +37,7 @@ class Plunger:
         parser.add_argument("address", help="Ethereum address to check for pending transactions", type=str)
         parser.add_argument("--rpc-host", help="JSON-RPC host (default: `localhost')", default="localhost", type=str)
         parser.add_argument("--rpc-port", help="JSON-RPC port (default: `8545')", default=8545, type=int)
-        parser.add_argument("--source", help=f"Comma-separated list of sources to get pending transactions from"
+        parser.add_argument("--source", help=f"Comma-separated list of sources to use for pending transaction discovery"
                                              f" (available: {self.SOURCE_ETHERSCAN}, {self.SOURCE_PARITY_TXQUEUE})",
                             type=lambda x: x.split(','), required=True)
 
