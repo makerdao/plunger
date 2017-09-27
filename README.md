@@ -18,13 +18,13 @@ with such situations by either overriding them with zero-valued transactions wit
 higher gas price, or just waiting for them to clear themselves. It also allows you
 to list pending transactions for manual inspection.
 
-_plunger_ has been created as part of development of the Maker Keeper Framework.
-It is essential to run each keeper from an individual address, which does not
-have any pending transactions. That's why before starting each keeper, doing
-a `plunger --source parity_txpool --wait 0x.....` if recommended.
+_plunger_ has been created during development of the Maker Keeper Framework.
+It is essential to run each keeper from an individual address that does not
+have any pending transactions. That is why before starting each keeper, doing
+a `plunger --source parity_txpool --wait 0x.....` is recommended.
 
-If you want to discuss this tool, the best place will be the _#keeper_ channel
-in Maker RocketChat, linked above.
+If you want to discuss this tool, the best place is the _#keeper_ channel
+in the Maker RocketChat, linked above.
 
 
 ## Installation
@@ -33,7 +33,7 @@ This project uses *Python 3.6.2*.
 
 In order to clone the project and install required third-party packages please execute:
 ```
-git clone https://github.com/reverendus/plunger.git
+git clone https://github.com/makerdao/plunger.git
 pip3 install -r requirements.txt
 ```
 
@@ -97,7 +97,7 @@ if called with `--wait`.
 
 _Plunger_ will not terminate until all pending transactions get mined. If it for some exceptional
 reason (the Ethereum node going down or some other network connectivity issues) terminates earlier
-than that, it will return a non-zero return code.
+than that, it will return a non-zero exit code.
 
 ### Overriding pending transactions
 
@@ -117,10 +117,10 @@ one transaction pending.
 
 If for some exceptional reason (the Ethereum node going down or some other network
 connectivity issues) _plunger_ terminates before all pending transactions from the specified
-address get mined, it will return a non-zero return code.
+address get mined, it will return a non-zero exit code.
 
 The account specified has to be unlocked for _plunger_ to be able to sign and send replacement
-transactions. If it's unable to do so, it will terminate immediately with a non-zero return code.
+transactions.
 
 ### Gas price
 
@@ -128,16 +128,18 @@ Currently for overriding transactions _plunger_ uses the default gas price sugge
 the Ethereum node it is connected to. Bear in mind that the new gas price has to be at least
 10% higher than the original one, otherwise Parity will not even accept such a replacement
 transaction. If it happens, _plunger_ will display an error message but will still wait
-for the pending transactions to get mined as it's still possible the original one will go through. 
+for the pending transactions to get mined as it is still possible the original one will go through. 
 
 In the future it will be possible to specify a custom gas price for replacement transactions.
 
 ### Pending transactions discovery
 
 The `--source` argument has to be used to specify how _plunger_ should discover pending transactions.
-Currently it can either query _etherscan.io_ or look for them in the Parity transaction queue.
-Bear in mind that it is a custom _Parity_ RPC endpoint and so this latter method will not
-work with _geth_.
+Currently it can either query _etherscan.io_ (`--source etherscan`)or look for them in the Parity
+transaction queue (`--source parity_txpool`). Bear in mind that it is a custom _Parity_ RPC endpoint
+and so this latter method will not work with _geth_.
+
+Both discovery methods can be used at the same time (`--source etherscan,parity_txpool`).
 
 The _etherscan.io_ integration works by scraping their website as the API exposed by them
 does not give access to pending transactions.
