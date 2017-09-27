@@ -18,13 +18,13 @@
 import os
 import sys
 import threading
+import time
 from contextlib import contextmanager
 from io import StringIO
 
 import py
 import pytest
 import requests_mock
-import time
 from pytest import fixture
 from web3 import TestRPCProvider, Web3
 
@@ -54,11 +54,23 @@ def args(arguments):
 
 
 class TestPlunger:
-    def simulate_transactions(self, web3, number_of_transactions):
+    @staticmethod
+    def simulate_transactions(web3, number_of_transactions):
         for no in range(0, number_of_transactions):
             web3.eth.sendTransaction({'from': web3.eth.accounts[0],
                                       'to': web3.eth.accounts[1],
                                       'value': 20})
+
+    @staticmethod
+    def mock_0_pending_txs_on_eterscan(mock, datadir, account):
+        mock.get(f"https://unknown.etherscan.io/txsPending?a={account}", text=datadir.join('0_pending_txs-list.html').read_text('utf-8'))
+
+    @staticmethod
+    def mock_3_pending_txs_on_eterscan(mock, datadir, account):
+        mock.get(f"https://unknown.etherscan.io/txsPending?a={account}", text=datadir.join('3_pending_txs-list.html').read_text('utf-8'))
+        mock.get(f"https://unknown.etherscan.io/tx/0x124cb0887d0ea364b402fcc1369b7f9bf4d651bc77d2445aefbeab538dd3aab9", text=datadir.join('3_pending_txs-get1.html').read_text('utf-8'))
+        mock.get(f"https://unknown.etherscan.io/tx/0x72e7a42d3e1b0773f62cfa9ee2bc54ff904a908ac2a668678f9c4880fd046f7a", text=datadir.join('3_pending_txs-get2.html').read_text('utf-8'))
+        mock.get(f"https://unknown.etherscan.io/tx/0x7bc44a24f93df200a3bd172a5a690bec50c215e7a84fa794bacfb61a211d6559", text=datadir.join('3_pending_txs-get3.html').read_text('utf-8'))
 
     def test_should_print_usage_when_no_arguments(self):
         # when
@@ -87,7 +99,7 @@ class TestPlunger:
 
         # when
         with requests_mock.Mocker(real_http=True) as mock:
-            mock.get(f"https://unknown.etherscan.io/txsPending?a={some_account}", text=datadir.join('0_pending_txs-list.html').read_text('utf-8'))
+            self.mock_0_pending_txs_on_eterscan(mock, datadir, some_account)
 
             with captured_output() as (out, err):
                 Plunger(args(f"--rpc-port 28545 --list {some_account}")).main()
@@ -102,10 +114,7 @@ class TestPlunger:
 
         # when
         with requests_mock.Mocker(real_http=True) as mock:
-            mock.get(f"https://unknown.etherscan.io/txsPending?a={some_account}", text=datadir.join('3_pending_txs-list.html').read_text('utf-8'))
-            mock.get(f"https://unknown.etherscan.io/tx/0x124cb0887d0ea364b402fcc1369b7f9bf4d651bc77d2445aefbeab538dd3aab9", text=datadir.join('3_pending_txs-get1.html').read_text('utf-8'))
-            mock.get(f"https://unknown.etherscan.io/tx/0x72e7a42d3e1b0773f62cfa9ee2bc54ff904a908ac2a668678f9c4880fd046f7a", text=datadir.join('3_pending_txs-get2.html').read_text('utf-8'))
-            mock.get(f"https://unknown.etherscan.io/tx/0x7bc44a24f93df200a3bd172a5a690bec50c215e7a84fa794bacfb61a211d6559", text=datadir.join('3_pending_txs-get3.html').read_text('utf-8'))
+            self.mock_3_pending_txs_on_eterscan(mock, datadir, some_account)
 
             with captured_output() as (out, err):
                 Plunger(args(f"--rpc-port 28546 --list {some_account}")).main()
@@ -130,10 +139,7 @@ class TestPlunger:
 
         # when
         with requests_mock.Mocker(real_http=True) as mock:
-            mock.get(f"https://unknown.etherscan.io/txsPending?a={some_account}", text=datadir.join('3_pending_txs-list.html').read_text('utf-8'))
-            mock.get(f"https://unknown.etherscan.io/tx/0x124cb0887d0ea364b402fcc1369b7f9bf4d651bc77d2445aefbeab538dd3aab9", text=datadir.join('3_pending_txs-get1.html').read_text('utf-8'))
-            mock.get(f"https://unknown.etherscan.io/tx/0x72e7a42d3e1b0773f62cfa9ee2bc54ff904a908ac2a668678f9c4880fd046f7a", text=datadir.join('3_pending_txs-get2.html').read_text('utf-8'))
-            mock.get(f"https://unknown.etherscan.io/tx/0x7bc44a24f93df200a3bd172a5a690bec50c215e7a84fa794bacfb61a211d6559", text=datadir.join('3_pending_txs-get3.html').read_text('utf-8'))
+            self.mock_3_pending_txs_on_eterscan(mock, datadir, some_account)
 
             with captured_output() as (out, err):
                 Plunger(args(f"--rpc-port 28547 --list {some_account}")).main()
@@ -155,10 +161,7 @@ class TestPlunger:
 
             # when
             with requests_mock.Mocker(real_http=True) as mock:
-                mock.get(f"https://unknown.etherscan.io/txsPending?a={some_account}", text=datadir.join('3_pending_txs-list.html').read_text('utf-8'))
-                mock.get(f"https://unknown.etherscan.io/tx/0x124cb0887d0ea364b402fcc1369b7f9bf4d651bc77d2445aefbeab538dd3aab9", text=datadir.join('3_pending_txs-get1.html').read_text('utf-8'))
-                mock.get(f"https://unknown.etherscan.io/tx/0x72e7a42d3e1b0773f62cfa9ee2bc54ff904a908ac2a668678f9c4880fd046f7a", text=datadir.join('3_pending_txs-get2.html').read_text('utf-8'))
-                mock.get(f"https://unknown.etherscan.io/tx/0x7bc44a24f93df200a3bd172a5a690bec50c215e7a84fa794bacfb61a211d6559", text=datadir.join('3_pending_txs-get3.html').read_text('utf-8'))
+                self.mock_3_pending_txs_on_eterscan(mock, datadir, some_account)
 
                 threading.Thread(target=lambda: Plunger(args(f"--rpc-port 28548 --wait {some_account}")).main()).start()
                 time.sleep(3)
