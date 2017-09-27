@@ -110,6 +110,15 @@ class TestPlunger:
         assert "usage: plunger" in err.getvalue()
         assert "error: one of the arguments --list --wait --override-with-zero-txs is required" in err.getvalue()
 
+    def test_should_complain_about_invalid_sources(self):
+        # when
+        with captured_output() as (out, err):
+            with pytest.raises(SystemExit):
+                Plunger(args("--source etherscan,invalid_one,parity_txqueue --wait 0x0000011111222223333322222111110000099999")).main()
+
+        # then
+        assert "Unknown source(s): 'invalid_one'." in err.getvalue()
+
     def test_should_detect_0_pending_transactions_on_etherscan(self, port_number, datadir):
         # given
         web3 = Web3(TestRPCProvider("127.0.0.1", port_number))

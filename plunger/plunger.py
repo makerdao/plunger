@@ -59,7 +59,7 @@ class Plunger:
         # Check if only correct sources have been listed in the value of the `--source` argument
         unknown_sources = set(self.arguments.source) - {self.SOURCE_ETHERSCAN, self.SOURCE_PARITY_TXQUEUE}
         if len(unknown_sources) > 0:
-            print(f"Unknown source(s): {str(unknown_sources).replace('{', '').replace('}', '')}.")
+            print(f"Unknown source(s): {str(unknown_sources).replace('{', '').replace('}', '')}.", file=sys.stderr)
             exit(-1)
 
     def main(self):
