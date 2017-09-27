@@ -132,15 +132,15 @@ for the pending transactions to get mined as it's still possible the original on
 
 In the future it will be possible to specify a custom gas price for replacement transactions.
 
-### Pending transactions source
+### Pending transactions discovery
 
-By default, _plunger_ uses _etherscan.io_ to discover pending transactions. In the future
-versions it will be also capable of monitoring the transaction pool of the Ethereum node
-it is connected to. It will also allow configuring the source i.e. choosing whether
-we want to use _etherscan.io_, local transaction pool or both.
+The `--source` argument has to be used to specify how _plunger_ should discover pending transactions.
+Currently it can either query _etherscan.io_ or look for them in the Parity transaction queue.
+Bear in mind that it is a custom _Parity_ RPC endpoint and so this latter method will not
+work with _geth_.
 
-Unfortunately, the API exposed by _etherscan.io_ does not give access to pending transactions.
-Due to that, integration works by simply scraping their website.
+The _etherscan.io_ integration works by scraping their website as the API exposed by them
+does not give access to pending transactions.
 
 
 ## License
