@@ -21,7 +21,7 @@ to list pending transactions for manual inspection.
 _plunger_ has been created during development of the Maker Keeper Framework.
 It is essential to run each keeper from an individual address that does not
 have any pending transactions. That is why before starting each keeper, doing
-a `plunger --source parity_txpool --wait 0x.....` is recommended.
+a `plunger --source parity_txqueue --wait 0x.....` is recommended.
 
 If you want to discuss this tool, the best place is the _#keeper_ channel
 in the Maker RocketChat, linked above.
@@ -136,10 +136,10 @@ In the future it will be possible to specify a custom gas price for replacement 
 
 The `--source` argument has to be used to specify how _plunger_ should discover pending transactions.
 Currently it can either query _etherscan.io_ (`--source etherscan`)or look for them in the Parity
-transaction queue (`--source parity_txpool`). Bear in mind that it is a custom _Parity_ RPC endpoint
+transaction queue (`--source parity_txqueue`). Bear in mind that it is a custom _Parity_ RPC endpoint
 and so this latter method will not work with _geth_.
 
-Both discovery methods can be used at the same time (`--source etherscan,parity_txpool`).
+Both discovery methods can be used at the same time (`--source etherscan,parity_txqueue`).
 
 The _etherscan.io_ integration works by scraping their website as the API exposed by them
 does not give access to pending transactions.
