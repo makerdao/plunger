@@ -32,6 +32,7 @@ sys.path.append(os.path.dirname(__file__) + "/..")
 
 from plunger.plunger import Plunger
 
+last_port_number = 28545
 
 @contextmanager
 def captured_output():
@@ -47,6 +48,13 @@ def captured_output():
 @fixture
 def datadir(request):
     return py.path.local(request.module.__file__).join("..").join("data")
+
+
+@fixture
+def port_number():
+    global last_port_number
+    last_port_number += 1
+    return last_port_number
 
 
 def args(arguments):
@@ -92,9 +100,9 @@ class TestPlunger:
         assert "usage: plunger" in err.getvalue()
         assert "error: one of the arguments --list --wait --override-with-zero-txs is required" in err.getvalue()
 
-    def test_should_detect_0_pending_transactions_on_etherscan(self, datadir):
+    def test_should_detect_0_pending_transactions_on_etherscan(self, port_number, datadir):
         # given
-        web3 = Web3(TestRPCProvider("127.0.0.1", 28545))
+        web3 = Web3(TestRPCProvider("127.0.0.1", port_number))
         some_account = web3.eth.accounts[0]
 
         # when
@@ -102,14 +110,14 @@ class TestPlunger:
             self.mock_0_pending_txs_on_eterscan(mock, datadir, some_account)
 
             with captured_output() as (out, err):
-                Plunger(args(f"--rpc-port 28545 --list {some_account}")).main()
+                Plunger(args(f"--rpc-port {port_number} --list {some_account}")).main()
 
         # then
         assert out.getvalue() == f"There are no pending transactions on unknown from {some_account}\n"
 
-    def test_should_detect_3_pending_transactions_on_etherscan(self, datadir):
+    def test_should_detect_3_pending_transactions_on_etherscan(self, port_number, datadir):
         # given
-        web3 = Web3(TestRPCProvider("127.0.0.1", 28546))
+        web3 = Web3(TestRPCProvider("127.0.0.1", port_number))
         some_account = web3.eth.accounts[0]
 
         # when
@@ -117,7 +125,7 @@ class TestPlunger:
             self.mock_3_pending_txs_on_eterscan(mock, datadir, some_account)
 
             with captured_output() as (out, err):
-                Plunger(args(f"--rpc-port 28546 --list {some_account}")).main()
+                Plunger(args(f"--rpc-port {port_number} --list {some_account}")).main()
 
         # then
         assert out.getvalue() == f"""There are 3 pending transactions on unknown from 0x82a978b3f5962a5b0957d9ee9eef472ee55b42f1:
@@ -129,9 +137,9 @@ class TestPlunger:
 0x124cb0887d0ea364b402fcc1369b7f9bf4d651bc77d2445aefbeab538dd3aab9      10
 """
 
-    def test_should_ignore_pending_transactions_if_their_nonce_is_already_used(self, datadir):
+    def test_should_ignore_pending_transactions_if_their_nonce_is_already_used(self, port_number, datadir):
         # given
-        web3 = Web3(TestRPCProvider("127.0.0.1", 28547))
+        web3 = Web3(TestRPCProvider("127.0.0.1", port_number))
         some_account = web3.eth.accounts[0]
 
         # and
@@ -142,7 +150,7 @@ class TestPlunger:
             self.mock_3_pending_txs_on_eterscan(mock, datadir, some_account)
 
             with captured_output() as (out, err):
-                Plunger(args(f"--rpc-port 28547 --list {some_account}")).main()
+                Plunger(args(f"--rpc-port {port_number} --list {some_account}")).main()
 
         # then
         assert out.getvalue() == f"""There is 1 pending transaction on unknown from 0x82a978b3f5962a5b0957d9ee9eef472ee55b42f1:
@@ -153,17 +161,17 @@ class TestPlunger:
 """
 
     @pytest.mark.timeout(20)
-    def test_wait_should_not_terminate_until_transactions_get_mined(self, datadir):
+    def test_wait_should_not_terminate_until_transactions_get_mined(self, port_number, datadir):
         with captured_output() as (out, err):
             # given
-            web3 = Web3(TestRPCProvider("127.0.0.1", 28548))
+            web3 = Web3(TestRPCProvider("127.0.0.1", port_number))
             some_account = web3.eth.accounts[0]
 
             # when
             with requests_mock.Mocker(real_http=True) as mock:
                 self.mock_3_pending_txs_on_eterscan(mock, datadir, some_account)
 
-                threading.Thread(target=lambda: Plunger(args(f"--rpc-port 28548 --wait {some_account}")).main()).start()
+                threading.Thread(target=lambda: Plunger(args(f"--rpc-port {port_number} --wait {some_account}")).main()).start()
                 time.sleep(3)
 
             # then
