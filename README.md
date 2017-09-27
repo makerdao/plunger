@@ -101,8 +101,6 @@ than that, it will return a non-zero return code.
 
 ### Overriding pending transactions
 
-**TODO This feature is not implemented yet!**
-
 If you want _plunger_ to try to override all pending transactions with a zero Wei ether transfer
 but with gas cost higher than the original, run it with the `--override-with-zero-txs` argument:
 
