@@ -90,11 +90,21 @@ class TestPlunger:
         assert "usage: plunger" in err.getvalue()
         assert "error: the following arguments are required: address" in err.getvalue()
 
-    def test_should_print_usage_when_only_address_specified(self):
+    def test_should_complain_about_missing_source_when_only_address_specified(self):
         # when
         with captured_output() as (out, err):
             with pytest.raises(SystemExit):
                 Plunger(args("0x0000011111222223333322222111110000099999")).main()
+
+        # then
+        assert "usage: plunger" in err.getvalue()
+        assert "error: the following arguments are required: --source" in err.getvalue()
+
+    def test_should_complain_about_missing_mode_when_only_address_and_source_specified(self):
+        # when
+        with captured_output() as (out, err):
+            with pytest.raises(SystemExit):
+                Plunger(args("--source etherscan 0x0000011111222223333322222111110000099999")).main()
 
         # then
         assert "usage: plunger" in err.getvalue()
@@ -110,7 +120,7 @@ class TestPlunger:
             self.mock_0_pending_txs_on_eterscan(mock, datadir, some_account)
 
             with captured_output() as (out, err):
-                Plunger(args(f"--rpc-port {port_number} --list {some_account}")).main()
+                Plunger(args(f"--rpc-port {port_number} --source etherscan --list {some_account}")).main()
 
         # then
         assert out.getvalue() == f"There are no pending transactions on unknown from {some_account}\n"
@@ -125,7 +135,7 @@ class TestPlunger:
             self.mock_3_pending_txs_on_eterscan(mock, datadir, some_account)
 
             with captured_output() as (out, err):
-                Plunger(args(f"--rpc-port {port_number} --list {some_account}")).main()
+                Plunger(args(f"--rpc-port {port_number} --source etherscan --list {some_account}")).main()
 
         # then
         assert out.getvalue() == f"""There are 3 pending transactions on unknown from 0x82a978b3f5962a5b0957d9ee9eef472ee55b42f1:
@@ -135,6 +145,7 @@ class TestPlunger:
 0x7bc44a24f93df200a3bd172a5a690bec50c215e7a84fa794bacfb61a211d6559       8
 0x72e7a42d3e1b0773f62cfa9ee2bc54ff904a908ac2a668678f9c4880fd046f7a       9
 0x124cb0887d0ea364b402fcc1369b7f9bf4d651bc77d2445aefbeab538dd3aab9      10
+
 """
 
     def test_should_ignore_pending_transactions_if_their_nonce_is_already_used(self, port_number, datadir):
@@ -150,7 +161,7 @@ class TestPlunger:
             self.mock_3_pending_txs_on_eterscan(mock, datadir, some_account)
 
             with captured_output() as (out, err):
-                Plunger(args(f"--rpc-port {port_number} --list {some_account}")).main()
+                Plunger(args(f"--rpc-port {port_number} --source etherscan --list {some_account}")).main()
 
         # then
         assert out.getvalue() == f"""There is 1 pending transaction on unknown from 0x82a978b3f5962a5b0957d9ee9eef472ee55b42f1:
@@ -158,6 +169,7 @@ class TestPlunger:
                               TxHash                                 Nonce
 ==========================================================================
 0x124cb0887d0ea364b402fcc1369b7f9bf4d651bc77d2445aefbeab538dd3aab9      10
+
 """
 
     @pytest.mark.timeout(20)
@@ -171,7 +183,7 @@ class TestPlunger:
             with requests_mock.Mocker(real_http=True) as mock:
                 self.mock_3_pending_txs_on_eterscan(mock, datadir, some_account)
 
-                threading.Thread(target=lambda: Plunger(args(f"--rpc-port {port_number} --wait {some_account}")).main()).start()
+                threading.Thread(target=lambda: Plunger(args(f"--rpc-port {port_number} --source etherscan --wait {some_account}")).main()).start()
                 time.sleep(3)
 
             # then
@@ -219,7 +231,7 @@ All pending transactions have been mined.
             with requests_mock.Mocker(real_http=True) as mock:
                 self.mock_3_pending_txs_on_eterscan(mock, datadir, some_account)
 
-                Plunger(args(f"--rpc-port {port_number} --override-with-zero-txs {some_account}")).main()
+                Plunger(args(f"--rpc-port {port_number} --source etherscan --override-with-zero-txs {some_account}")).main()
 
             # then
             assert out.getvalue() == f"""There are 2 pending transactions on unknown from 0x82a978b3f5962a5b0957d9ee9eef472ee55b42f1:

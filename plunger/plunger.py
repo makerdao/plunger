@@ -19,19 +19,27 @@ import argparse
 import sys
 import time
 
+import requests
 from texttable import Texttable
 from web3 import Web3, HTTPProvider
 
 from plunger.etherscan import Etherscan
+from plunger.transaction import Transaction
 
 
 class Plunger:
+    SOURCE_ETHERSCAN = "etherscan"
+    SOURCE_PARITY_TXQUEUE = "parity_txqueue"
+
     def __init__(self, args: list):
         # Define basic arguments
         parser = argparse.ArgumentParser(prog='plunger')
         parser.add_argument("address", help="Ethereum address to check for pending transactions", type=str)
         parser.add_argument("--rpc-host", help="JSON-RPC host (default: `localhost')", default="localhost", type=str)
         parser.add_argument("--rpc-port", help="JSON-RPC port (default: `8545')", default=8545, type=int)
+        parser.add_argument("--source", help=f"Comma-separated list of sources to get pending transactions from"
+                                             f" (available: {self.SOURCE_ETHERSCAN}, {self.SOURCE_PARITY_TXQUEUE})",
+                            type=lambda x: x.split(','), required=True)
 
         # Define mutually exclusive action arguments
         action = parser.add_mutually_exclusive_group(required=True)
@@ -39,10 +47,20 @@ class Plunger:
         action.add_argument('--wait', help="Wait for the pending transactions to clear", dest='wait', action='store_true')
         action.add_argument('--override-with-zero-txs', help="Override the pending transactions with zero-value txs", dest='override', action='store_true')
 
-        # Parse the arguments, initialize web3.py
+        # Parse the arguments, validate source
         self.arguments = parser.parse_args(args)
+        self.validate_sources()
+
+        # Initialize web3.py
         self.web3 = Web3(HTTPProvider(endpoint_uri=f"http://{self.arguments.rpc_host}:{self.arguments.rpc_port}"))
         self.web3.eth.defaultAccount = self.arguments.address
+
+    def validate_sources(self):
+        # Check if only correct sources have been listed in the value of the `--source` argument
+        unknown_sources = set(self.arguments.source) - {self.SOURCE_ETHERSCAN, self.SOURCE_PARITY_TXQUEUE}
+        if len(unknown_sources) > 0:
+            print(f"Unknown source(s): {str(unknown_sources).replace('{', '').replace('}', '')}.")
+            exit(-1)
 
     def main(self):
         # Get pending transactions
@@ -80,27 +98,41 @@ class Plunger:
 
             print("")
             print(table.draw())
+            print(f"")
 
     def override(self, transactions: list):
-        for tx in transactions:
-            self.web3.eth.sendTransaction({'from': self.web3.eth.defaultAccount,
-                                           'to': self.web3.eth.defaultAccount,
-                                           'nonce': tx.nonce,
-                                           'value': 0})
+        # Override all pending transactions with zero-wei transfer transactions
+        for nonce in self.unique_nonces(transactions):
+            try:
+                gas_price = self.web3.eth.gasPrice
+                tx_hash = self.web3.eth.sendTransaction({'from': self.web3.eth.defaultAccount,
+                                                         'to': self.web3.eth.defaultAccount,
+                                                         'gasPrice': gas_price,
+                                                         'nonce': nonce,
+                                                         'value': 0})
 
-        print(f"")
-        print(f"Sent {len(transactions)} replacement transactions to override them.")
+                print(f"Sent replacement transaction with nonce={nonce}, gas_price={gas_price}, tx_hash={tx_hash}.")
+            except Exception as e:
+                print(f"Failed to send replacement transaction with nonce={nonce}, gas_price={gas_price}.")
+                print(f"   Error: {e}")
 
     def wait(self, transactions: list):
-        print(f"")
         print(f"Waiting for the transactions to get mined...")
 
         # When `get_last_nonce()` stops being lower than the highest pending nonce,
-        # it means all pending transactions or their replacements have been mined
+        # it means all pending transactions or their replacements have been mined.
         while self.get_last_nonce() < max(transactions, key=lambda tx: tx.nonce).nonce:
             time.sleep(1)
 
         print(f"All pending transactions have been mined.")
+
+    @staticmethod
+    def unique_nonces(transactions: list) -> list:
+        unique_nonces = []
+        for transaction in transactions:
+            if transaction.nonce not in unique_nonces:
+                unique_nonces.append(transaction.nonce)
+        return unique_nonces
 
     def chain(self) -> str:
         block_0 = self.web3.eth.getBlock(0)['hash']
@@ -123,8 +155,12 @@ class Plunger:
         return self.web3.eth.getTransactionCount(self.web3.eth.defaultAccount)-1
 
     def get_pending_transactions(self) -> list:
-        # Get the list of pending transactions and their details from etherscan.io
-        transactions = Etherscan(self.chain()).list_pending_txs(self.web3.eth.defaultAccount)
+        # Get the list of pending transactions and their details from specified sources
+        transactions = []
+        if self.SOURCE_ETHERSCAN in self.arguments.source:
+            transactions += self.get_pending_transactions_from_etherscan()
+        if self.SOURCE_PARITY_TXQUEUE in self.arguments.source:
+            transactions += self.get_pending_transactions_from_parity()
 
         # Ignore these which have been already mined
         last_nonce = self.get_last_nonce()
@@ -132,6 +168,22 @@ class Plunger:
 
         # Sort by nonce and tx_hash
         return sorted(transactions, key=lambda tx: (tx.nonce, tx.tx_hash))
+
+    def get_pending_transactions_from_etherscan(self) -> list:
+        # Get the list of pending transactions and their details from etherscan.io
+        return Etherscan(self.chain()).list_pending_txs(self.web3.eth.defaultAccount)
+
+    def get_pending_transactions_from_parity(self) -> list:
+        # Get the list of pending transactions and their details from Parity transaction pool
+        # First, execute the RPC call and get the response
+        request = {"method": "parity_pendingTransactions", "params": [], "id": 1, "jsonrpc": "2.0"}
+        response = requests.post(self.web3.currentProvider.endpoint_uri, None, request).json()
+
+        # Then extract pending transactions sent by us from the response and convert them into `Transaction` objects
+        items = response['result']
+        items = filter(lambda item: item['from'].lower() == self.web3.eth.defaultAccount.lower(), items)
+        items = filter(lambda item: item['blockNumber'] is None, items)
+        return list(map(lambda item: Transaction(tx_hash=item['hash'], nonce=int(item['nonce'], 16)), items))
 
 
 if __name__ == "__main__":
