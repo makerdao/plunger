@@ -82,8 +82,14 @@ class Plunger:
             print(table.draw())
 
     def override(self, transactions: list):
-        print(f"Transaction overriding is not implemented yet")
-        exit(-1)
+        for tx in transactions:
+            self.web3.eth.sendTransaction({'from': self.web3.eth.defaultAccount,
+                                           'to': self.web3.eth.defaultAccount,
+                                           'nonce': tx.nonce,
+                                           'value': 0})
+
+        print(f"")
+        print(f"Sent {len(transactions)} replacement transactions to override them.")
 
     def wait(self, transactions: list):
         print(f"")
@@ -94,7 +100,7 @@ class Plunger:
         while self.get_last_nonce() < max(transactions, key=lambda tx: tx.nonce).nonce:
             time.sleep(1)
 
-        print(f"All pending transactions have been mined")
+        print(f"All pending transactions have been mined.")
 
     def chain(self) -> str:
         block_0 = self.web3.eth.getBlock(0)['hash']
