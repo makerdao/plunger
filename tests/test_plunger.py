@@ -71,14 +71,14 @@ class TestPlunger:
 
     @staticmethod
     def mock_0_pending_txs_on_eterscan(mock, datadir, account: str):
-        mock.get(f"https://unknown.etherscan.io/txsPending?a={account}", text=datadir.join('0_pending_txs-list.html').read_text('utf-8'))
+        mock.get(f"https://unknown.etherscan.io/txsPending?a={account}", text=datadir.join('etherscan').join('0_pending_txs-list.html').read_text('utf-8'))
 
     @staticmethod
     def mock_3_pending_txs_on_eterscan(mock, datadir, account: str):
-        mock.get(f"https://unknown.etherscan.io/txsPending?a={account}", text=datadir.join('3_pending_txs-list.html').read_text('utf-8'))
-        mock.get(f"https://unknown.etherscan.io/tx/0x124cb0887d0ea364b402fcc1369b7f9bf4d651bc77d2445aefbeab538dd3aab9", text=datadir.join('3_pending_txs-get1.html').read_text('utf-8'))
-        mock.get(f"https://unknown.etherscan.io/tx/0x72e7a42d3e1b0773f62cfa9ee2bc54ff904a908ac2a668678f9c4880fd046f7a", text=datadir.join('3_pending_txs-get2.html').read_text('utf-8'))
-        mock.get(f"https://unknown.etherscan.io/tx/0x7bc44a24f93df200a3bd172a5a690bec50c215e7a84fa794bacfb61a211d6559", text=datadir.join('3_pending_txs-get3.html').read_text('utf-8'))
+        mock.get(f"https://unknown.etherscan.io/txsPending?a={account}", text=datadir.join('etherscan').join('3_pending_txs-list.html').read_text('utf-8'))
+        mock.get(f"https://unknown.etherscan.io/tx/0x124cb0887d0ea364b402fcc1369b7f9bf4d651bc77d2445aefbeab538dd3aab9", text=datadir.join('etherscan').join('3_pending_txs-get1.html').read_text('utf-8'))
+        mock.get(f"https://unknown.etherscan.io/tx/0x72e7a42d3e1b0773f62cfa9ee2bc54ff904a908ac2a668678f9c4880fd046f7a", text=datadir.join('etherscan').join('3_pending_txs-get2.html').read_text('utf-8'))
+        mock.get(f"https://unknown.etherscan.io/tx/0x7bc44a24f93df200a3bd172a5a690bec50c215e7a84fa794bacfb61a211d6559", text=datadir.join('etherscan').join('3_pending_txs-get3.html').read_text('utf-8'))
 
     @staticmethod
     def mock_0_pending_txs_in_parity_txqueue(mock, datadir, port_number: int):
