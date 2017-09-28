@@ -173,7 +173,7 @@ class Plunger:
         # Get the list of pending transactions and their details from Parity transaction pool
         # First, execute the RPC call and get the response
         request = {"method": "parity_pendingTransactions", "params": [], "id": 1, "jsonrpc": "2.0"}
-        response = requests.post(self.web3.currentProvider.endpoint_uri, None, request).json()
+        response = requests.post(self.web3.currentProvider.endpoint_uri + "/rpc", None, request).json()
 
         # Then extract pending transactions sent by us from the response and convert them into `Transaction` objects
         items = response['result']
