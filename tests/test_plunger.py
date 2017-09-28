@@ -82,12 +82,11 @@ class TestPlunger:
 
     @staticmethod
     def mock_0_pending_txs_in_parity_txqueue(mock, datadir, port_number: int):
-        response = datadir.join('parity').join('0_pending_txs_from_our_address.json').read_text('utf-8')
-        mock.post(f"http://localhost:{port_number}/rpc", text=response)
+        TestPlunger.mock_3_pending_txs_in_parity_txqueue(mock, datadir, port_number, '0x0')
 
     @staticmethod
     def mock_3_pending_txs_in_parity_txqueue(mock, datadir, port_number: int, account: str):
-        response = datadir.join('parity').join('3_pending_txs_from_our_address.json').read_text('utf-8')
+        response = datadir.join('parity').join('response.json').read_text('utf-8')
         response = response.replace('OUR_ADDRESS', account.upper())
         mock.post(f"http://localhost:{port_number}/rpc", text=response)
 
