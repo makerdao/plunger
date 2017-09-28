@@ -135,7 +135,7 @@ In the future it will be possible to specify a custom gas price for replacement 
 ### Pending transactions discovery
 
 The `--source` argument has to be used to specify how _plunger_ should discover pending transactions.
-Currently it can either query _etherscan.io_ (`--source etherscan`)or look for them in the Parity
+Currently it can either query _etherscan.io_ (`--source etherscan`) or look for them in the Parity
 transaction queue (`--source parity_txqueue`). Bear in mind that it is a custom _Parity_ RPC endpoint
 and so this latter method will not work with _geth_.
 
