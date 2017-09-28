@@ -206,6 +206,31 @@ class TestPlunger:
 
 """
 
+    def test_should_ignore_duplicates_when_using_two_sources(self, port_number, datadir):
+        # given
+        web3 = Web3(TestRPCProvider("127.0.0.1", port_number))
+        some_account = web3.eth.accounts[0]
+
+        # when
+        with requests_mock.Mocker(real_http=True) as mock:
+            self.mock_3_pending_txs_on_eterscan(mock, datadir, some_account)
+            self.mock_3_pending_txs_in_parity_txqueue(mock, datadir, port_number, some_account)
+
+            with captured_output() as (out, err):
+                Plunger(args(f"--rpc-port {port_number} --source etherscan,parity_txqueue --list {some_account}")).main()
+
+        # then
+        assert out.getvalue() == f"""There are 4 pending transactions on unknown from 0x82a978b3f5962a5b0957d9ee9eef472ee55b42f1:
+
+                              TxHash                                 Nonce
+==========================================================================
+0x7bc44a24f93df200a3bd172a5a690bec50c215e7a84fa794bacfb61a211d6559       8
+0x72e7a42d3e1b0773f62cfa9ee2bc54ff904a908ac2a668678f9c4880fd046f7a       9
+0x124cb0887d0ea364b402fcc1369b7f9bf4d651bc77d2445aefbeab538dd3aab9      10
+0x53050e62c81fbe440d97d703860096467089bd37b2ad4cc6c699acf217436a64      11
+
+"""
+
     def test_should_ignore_pending_transactions_if_their_nonce_is_already_used(self, port_number, datadir):
         # given
         web3 = Web3(TestRPCProvider("127.0.0.1", port_number))

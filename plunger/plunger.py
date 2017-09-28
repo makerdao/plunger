@@ -162,8 +162,8 @@ class Plunger:
         last_nonce = self.get_last_nonce()
         transactions = filter(lambda tx: tx.nonce > last_nonce, transactions)
 
-        # Sort by nonce and tx_hash
-        return sorted(transactions, key=lambda tx: (tx.nonce, tx.tx_hash))
+        # Remove duplicates, sort by nonce and tx_hash
+        return sorted(set(transactions), key=lambda tx: (tx.nonce, tx.tx_hash))
 
     def get_pending_transactions_from_etherscan(self) -> list:
         # Get the list of pending transactions and their details from etherscan.io

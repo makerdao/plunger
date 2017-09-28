@@ -20,3 +20,10 @@ class Transaction:
     def __init__(self, tx_hash, nonce):
         self.tx_hash = tx_hash
         self.nonce = nonce
+
+    def __eq__(self, other):
+        return self.tx_hash == other.tx_hash and \
+               self.nonce == other.nonce
+
+    def __hash__(self):
+        return hash(self.tx_hash) + hash(self.nonce)
