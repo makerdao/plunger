@@ -20,11 +20,45 @@ import sys
 import time
 
 import requests
+from lxml import html
 from texttable import Texttable
 from web3 import Web3, HTTPProvider
 
-from plunger.etherscan import Etherscan
-from plunger.transaction import Transaction
+
+class Transaction:
+    def __init__(self, tx_hash, nonce):
+        self.tx_hash = tx_hash
+        self.nonce = nonce
+
+    def __eq__(self, other):
+        return self.tx_hash == other.tx_hash and \
+               self.nonce == other.nonce
+
+    def __hash__(self):
+        return hash(self.tx_hash) + hash(self.nonce)
+
+
+class Etherscan:
+    def __init__(self, chain):
+        if chain == "ethlive":
+            self.url = "etherscan.io"
+        elif chain == "kovan":
+            self.url = "kovan.etherscan.io"
+        else:
+            #TODO for unit testing only, let's find a better solution afterwards
+            self.url = "unknown.etherscan.io"
+
+    def list_pending_txs(self, address) -> list:
+        page = requests.get(f"https://{self.url}/txsPending?a={address}")
+        tree = html.fromstring(page.content)
+        tx_ids = tree.xpath('//table[contains(@class,"table")]//td[1]/span[@class="address-tag"]/a/text()')
+        return list(map(self.tx_details, tx_ids))
+
+    def tx_details(self, tx_id) -> Transaction:
+        page = requests.get(f"https://{self.url}/tx/{tx_id}")
+        tree = html.fromstring(page.content)
+        nonce = int(tree.xpath('//span[contains(@title,"The transaction nonce")]/text()')[0].strip())
+        return Transaction(tx_hash=tx_id, nonce=nonce)
 
 
 class Plunger:
