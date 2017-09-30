@@ -71,6 +71,7 @@ class Plunger:
         parser.add_argument("address", help="Ethereum address to check for pending transactions", type=str)
         parser.add_argument("--rpc-host", help="JSON-RPC host (default: `localhost')", default="localhost", type=str)
         parser.add_argument("--rpc-port", help="JSON-RPC port (default: `8545')", default=8545, type=int)
+        parser.add_argument("--gas-price", help="Gas price (in Wei) for overriding transactions", default=0, type=int)
         parser.add_argument("--source", help=f"Comma-separated list of sources to use for pending transaction discovery"
                                              f" (available: {self.SOURCE_ETHERSCAN}, {self.SOURCE_PARITY_TXQUEUE})",
                             type=lambda x: x.split(','), required=True)
@@ -138,7 +139,7 @@ class Plunger:
         # Override all pending transactions with zero-wei transfer transactions
         for nonce in self.unique_nonces(transactions):
             try:
-                gas_price = self.web3.eth.gasPrice
+                gas_price = self.web3.eth.gasPrice if self.arguments.gas_price == 0 else self.arguments.gas_price
                 tx_hash = self.web3.eth.sendTransaction({'from': self.web3.eth.defaultAccount,
                                                          'to': self.web3.eth.defaultAccount,
                                                          'gasPrice': gas_price,
