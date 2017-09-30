@@ -84,6 +84,16 @@ class TestPlunger:
         web3.eth.sendTransaction = send_transaction_replacement
 
     @staticmethod
+    def ensure_transactions_fail(web3: Web3, error_message: str):
+        def send_transaction_replacement(transaction):
+            del transaction['nonce']
+            send_transaction_original(transaction)
+            raise Exception(error_message)
+
+        send_transaction_original = web3.eth.sendTransaction
+        web3.eth.sendTransaction = send_transaction_replacement
+
+    @staticmethod
     def mock_0_pending_txs_on_eterscan(mock, datadir, account: str):
         mock.get(f"https://unknown.etherscan.io/txsPending?a={account}", text=datadir.join('etherscan').join('0_pending_txs-list.html').read_text('utf-8'))
 
@@ -382,6 +392,42 @@ Sent replacement transaction with nonce=10, gas_price={some_gas_price}, tx_hash=
 Waiting for the transactions to get mined...
 All pending transactions have been mined.
 """, out.getvalue(), re.MULTILINE)
+
+            # and
+            assert web3.eth.getTransactionCount(some_account) == 11
+
+    @pytest.mark.timeout(20)
+    def test_should_handle_transaction_sending_errors(self, port_number, datadir):
+        with captured_output() as (out, err):
+            # given
+            web3 = Web3(TestRPCProvider("127.0.0.1", port_number))
+            web3.eth.defaultAccount = web3.eth.accounts[0]
+            some_account = web3.eth.accounts[0]
+
+            # and
+            self.simulate_transactions(web3, 10)
+            self.ensure_transactions_fail(web3, "Simulated transaction failure")
+
+            # when
+            with requests_mock.Mocker(real_http=True) as mock:
+                self.mock_3_pending_txs_on_eterscan(mock, datadir, some_account)
+
+                plunger = Plunger(args(f"--rpc-port {port_number} --source etherscan --override-with-zero-txs {some_account}"))
+                plunger.web3 = web3  # we need to set `web3` as it has `sendTransaction` mocked for transaction failure simulation
+                plunger.main()
+
+            # then
+            assert out.getvalue() == f"""There is 1 pending transaction on unknown from {some_account}:
+
+                              TxHash                                 Nonce
+==========================================================================
+0x124cb0887d0ea364b402fcc1369b7f9bf4d651bc77d2445aefbeab538dd3aab9      10
+
+Failed to send replacement transaction with nonce=10, gas_price=1.
+   Error: Simulated transaction failure
+Waiting for the transactions to get mined...
+All pending transactions have been mined.
+"""
 
             # and
             assert web3.eth.getTransactionCount(some_account) == 11
