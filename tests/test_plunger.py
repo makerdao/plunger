@@ -21,9 +21,11 @@ import threading
 import time
 from contextlib import contextmanager
 from io import StringIO
+from unittest.mock import MagicMock
 
 import py
 import pytest
+import re
 import requests_mock
 from pytest import fixture
 from web3 import TestRPCProvider, Web3
@@ -63,11 +65,23 @@ def args(arguments):
 
 class TestPlunger:
     @staticmethod
-    def simulate_transactions(web3, number_of_transactions):
+    def simulate_transactions(web3, number_of_transactions: int):
         for no in range(0, number_of_transactions):
             web3.eth.sendTransaction({'from': web3.eth.accounts[0],
                                       'to': web3.eth.accounts[1],
                                       'value': 20})
+
+    # Until `https://github.com/pipermerriam/eth-testrpc/issues/98` gets resolved, we substitute
+    # `web3.eth.sendTransaction` and do our own nonce comparison to ensure `plunger` uses correct nonces
+    @staticmethod
+    def ensure_transaction_nonces(web3: Web3, nonces: list):
+        def send_transaction_replacement(transaction):
+            if transaction['nonce'] == nonces.pop(0):
+                del transaction['nonce']
+                return send_transaction_original(transaction)
+
+        send_transaction_original = web3.eth.sendTransaction
+        web3.eth.sendTransaction = send_transaction_replacement
 
     @staticmethod
     def mock_0_pending_txs_on_eterscan(mock, datadir, account: str):
@@ -269,7 +283,7 @@ class TestPlunger:
                 time.sleep(3)
 
             # then
-            assert out.getvalue() == f"""There are 3 pending transactions on unknown from 0x82a978b3f5962a5b0957d9ee9eef472ee55b42f1:
+            assert out.getvalue() == f"""There are 3 pending transactions on unknown from {some_account}:
 
                               TxHash                                 Nonce
 ==========================================================================
@@ -287,7 +301,7 @@ Waiting for the transactions to get mined...
             time.sleep(4)
 
             # then
-            assert out.getvalue() == f"""There are 3 pending transactions on unknown from 0x82a978b3f5962a5b0957d9ee9eef472ee55b42f1:
+            assert out.getvalue() == f"""There are 3 pending transactions on unknown from {some_account}:
 
                               TxHash                                 Nonce
 ==========================================================================
@@ -299,35 +313,39 @@ Waiting for the transactions to get mined...
 All pending transactions have been mined.
 """
 
-    @pytest.mark.skip("Requires https://github.com/pipermerriam/eth-testrpc/issues/98")
+    @pytest.mark.timeout(20)
     def test_should_override_transactions(self, port_number, datadir):
         with captured_output() as (out, err):
             # given
             web3 = Web3(TestRPCProvider("127.0.0.1", port_number))
+            web3.eth.defaultAccount = web3.eth.accounts[0]
             some_account = web3.eth.accounts[0]
 
             # and
             self.simulate_transactions(web3, 9)
+            self.ensure_transaction_nonces(web3, [9, 10])
 
             # when
             with requests_mock.Mocker(real_http=True) as mock:
                 self.mock_3_pending_txs_on_eterscan(mock, datadir, some_account)
 
-                Plunger(args(f"--rpc-port {port_number} --source etherscan --override-with-zero-txs {some_account}")).main()
+                plunger = Plunger(args(f"--rpc-port {port_number} --source etherscan --override-with-zero-txs {some_account}"))
+                plunger.web3 = web3  # we need to set `web3` as it has `sendTransaction` mocked for nonce comparison
+                plunger.main()
 
             # then
-            assert out.getvalue() == f"""There are 2 pending transactions on unknown from 0x82a978b3f5962a5b0957d9ee9eef472ee55b42f1:
+            assert re.match(f"""There are 2 pending transactions on unknown from {some_account}:
 
                               TxHash                                 Nonce
 ==========================================================================
 0x72e7a42d3e1b0773f62cfa9ee2bc54ff904a908ac2a668678f9c4880fd046f7a       9
 0x124cb0887d0ea364b402fcc1369b7f9bf4d651bc77d2445aefbeab538dd3aab9      10
 
-Sent 2 replacement transactions to override them.
-
+Sent replacement transaction with nonce=9, gas_price=1, tx_hash=0x[0-9a-f]{{64}}.
+Sent replacement transaction with nonce=10, gas_price=1, tx_hash=0x[0-9a-f]{{64}}.
 Waiting for the transactions to get mined...
 All pending transactions have been mined.
-"""
+""", out.getvalue(), re.MULTILINE)
 
             # and
             assert web3.eth.getTransactionCount(some_account) == 11
