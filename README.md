@@ -124,13 +124,14 @@ transactions.
 
 ### Gas price
 
-Currently for overriding transactions _plunger_ uses the default gas price suggested by
-the Ethereum node it is connected to. Bear in mind that the new gas price has to be at least
-10% higher than the original one, otherwise Parity will not even accept such a replacement
-transaction. If it happens, _plunger_ will display an error message but will still wait
-for the pending transactions to get mined as it is still possible the original one will go through. 
+Gas price for overriding transactions can be specified using the `--gas-price` argument.
+If this argument is not present, _plunger_ will use the default gas price suggested by
+the Ethereum node it is connected to.
 
-In the future it will be possible to specify a custom gas price for replacement transactions.
+Bear in mind that the new gas price has to be at least 10% higher than the original one,
+otherwise Parity will not even accept such a replacement transaction. If it happens, _plunger_
+will display an error message but will still wait for the pending transactions to get mined
+as it is still possible the original one will go through. 
 
 ### Pending transactions discovery
 
