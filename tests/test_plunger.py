@@ -171,7 +171,7 @@ class TestPlunger:
                 Plunger(args(f"--rpc-port {port_number} --source etherscan --list {some_account}")).main()
 
         # then
-        assert out.getvalue() == f"""There are 3 pending transactions on unknown from 0x82a978b3f5962a5b0957d9ee9eef472ee55b42f1:
+        assert out.getvalue() == f"""There are 3 pending transactions on unknown from {some_account}:
 
                               TxHash                                 Nonce
 ==========================================================================
@@ -209,7 +209,7 @@ class TestPlunger:
                 Plunger(args(f"--rpc-port {port_number} --source parity_txqueue --list {some_account}")).main()
 
         # then
-        assert out.getvalue() == f"""There are 3 pending transactions on unknown from 0x82a978b3f5962a5b0957d9ee9eef472ee55b42f1:
+        assert out.getvalue() == f"""There are 3 pending transactions on unknown from {some_account}:
 
                               TxHash                                 Nonce
 ==========================================================================
@@ -233,7 +233,7 @@ class TestPlunger:
                 Plunger(args(f"--rpc-port {port_number} --source etherscan,parity_txqueue --list {some_account}")).main()
 
         # then
-        assert out.getvalue() == f"""There are 4 pending transactions on unknown from 0x82a978b3f5962a5b0957d9ee9eef472ee55b42f1:
+        assert out.getvalue() == f"""There are 4 pending transactions on unknown from {some_account}:
 
                               TxHash                                 Nonce
 ==========================================================================
@@ -260,7 +260,7 @@ class TestPlunger:
                 Plunger(args(f"--rpc-port {port_number} --source etherscan --list {some_account}")).main()
 
         # then
-        assert out.getvalue() == f"""There is 1 pending transaction on unknown from 0x82a978b3f5962a5b0957d9ee9eef472ee55b42f1:
+        assert out.getvalue() == f"""There is 1 pending transaction on unknown from {some_account}:
 
                               TxHash                                 Nonce
 ==========================================================================
