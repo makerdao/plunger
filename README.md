@@ -54,8 +54,9 @@ export LDFLAGS="-L$(brew --prefix openssl)/lib" CFLAGS="-I$(brew --prefix openss
 ## Usage
 
 ```
-usage: plunger [-h] [--rpc-host RPC_HOST] [--rpc-port RPC_PORT] --source
-               SOURCE (--list | --wait | --override-with-zero-txs)
+usage: plunger [-h] [--rpc-host RPC_HOST] [--rpc-port RPC_PORT]
+               [--gas-price GAS_PRICE] --source SOURCE
+               (--list | --wait | --override-with-zero-txs)
                address
 
 positional arguments:
@@ -65,6 +66,8 @@ optional arguments:
   -h, --help            show this help message and exit
   --rpc-host RPC_HOST   JSON-RPC host (default: `localhost')
   --rpc-port RPC_PORT   JSON-RPC port (default: `8545')
+  --gas-price GAS_PRICE
+                        Gas price (in Wei) for overriding transactions
   --source SOURCE       Comma-separated list of sources to use for pending
                         transaction discovery (available: etherscan,
                         parity_txqueue)
