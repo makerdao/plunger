@@ -21,7 +21,6 @@ import threading
 import time
 from contextlib import contextmanager
 from io import StringIO
-from unittest.mock import MagicMock
 
 import py
 import pytest
