@@ -289,7 +289,7 @@ class TestPlunger:
                 self.mock_3_pending_txs_on_eterscan(mock, datadir, some_account)
 
                 threading.Thread(target=lambda: Plunger(args(f"--rpc-port {port_number} --source etherscan --wait {some_account}")).main()).start()
-                time.sleep(3)
+                time.sleep(7)
 
             # then
             assert out.getvalue() == f"""There are 3 pending transactions on unknown from {some_account}:
