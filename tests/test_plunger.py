@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
+import re
 import sys
 import threading
 import time
@@ -24,16 +24,14 @@ from io import StringIO
 
 import py
 import pytest
-import re
 import requests_mock
 from pytest import fixture
 from web3 import TestRPCProvider, Web3
 
-sys.path.append(os.path.dirname(__file__) + "/..")
-
 from plunger.plunger import Plunger
 
 last_port_number = 28545
+
 
 @contextmanager
 def captured_output():
