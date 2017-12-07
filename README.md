@@ -149,6 +149,33 @@ The _etherscan.io_ integration works by scraping their website as the API expose
 does not give access to pending transactions.
 
 
+## Testing
+
+### Automated testing
+
+A unit-test harness is present for testing almost all _plunger_ features. It can be run
+with the `./test.sh` script, preceded by installing necessary dependencies with
+`pip3 install -r requirements-dev.txt`.
+
+### Manual testing
+
+The following commands can be used to manually test _plunger_. The first two commands
+send 1 Wei transfers with a pretty low gas price of 0.5 GWei, so they won't instantly
+get mined and will very likely get stuck. The third command runs _plunger_ using the same
+account, so if everything works correctly we can see these two transactions being plunged.
+
+```
+export ETH_FROM=0x001.......
+
+seth send --async --gas-price=500000000 --value=1 -F $ETH_FROM $ETH_FROM
+seth send --async --gas-price=500000000 --value=1 -F $ETH_FROM $ETH_FROM
+
+bin/plunger --source parity_txqueue --override-with-zero-txs $ETH_FROM
+```
+
+The above snippet uses `seth` (see <https://github.com/dapphub/seth>) for sending transactions.
+
+
 ## License
 
 See [COPYING](https://github.com/reverendus/plunger/blob/master/COPYING) file.
