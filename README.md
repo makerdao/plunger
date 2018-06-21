@@ -179,4 +179,4 @@ The above snippet uses `seth` (see <https://github.com/dapphub/seth>) for sendin
 
 ## License
 
-See [COPYING](https://github.com/reverendus/plunger/blob/master/COPYING) file.
+See [COPYING](https://github.com/makerdao/plunger/blob/master/COPYING) file.
