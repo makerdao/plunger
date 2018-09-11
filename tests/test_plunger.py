@@ -91,17 +91,6 @@ class TestPlunger:
         web3.eth.sendTransaction = send_transaction_replacement
 
     @staticmethod
-    def mock_0_pending_txs_on_eterscan(mock, datadir, account: str):
-        mock.get(f"https://unknown.etherscan.io/txsPending?a={account}", text=datadir.join('etherscan').join('0_pending_txs-list.html').read_text('utf-8'))
-
-    @staticmethod
-    def mock_3_pending_txs_on_eterscan(mock, datadir, account: str):
-        mock.get(f"https://unknown.etherscan.io/txsPending?a={account}", text=datadir.join('etherscan').join('3_pending_txs-list.html').read_text('utf-8'))
-        mock.get(f"https://unknown.etherscan.io/tx/0x124cb0887d0ea364b402fcc1369b7f9bf4d651bc77d2445aefbeab538dd3aab9", text=datadir.join('etherscan').join('3_pending_txs-get1.html').read_text('utf-8'))
-        mock.get(f"https://unknown.etherscan.io/tx/0x72e7a42d3e1b0773f62cfa9ee2bc54ff904a908ac2a668678f9c4880fd046f7a", text=datadir.join('etherscan').join('3_pending_txs-get2.html').read_text('utf-8'))
-        mock.get(f"https://unknown.etherscan.io/tx/0x7bc44a24f93df200a3bd172a5a690bec50c215e7a84fa794bacfb61a211d6559", text=datadir.join('etherscan').join('3_pending_txs-get3.html').read_text('utf-8'))
-
-    @staticmethod
     def mock_0_pending_txs_in_parity_txqueue(mock, datadir, port_number: int):
         TestPlunger.mock_3_pending_txs_in_parity_txqueue(mock, datadir, port_number, '0x0')
 
@@ -141,53 +130,6 @@ class TestPlunger:
         assert "usage: plunger" in err.getvalue()
         assert "error: one of the arguments --list --wait --override-with-zero-txs is required" in err.getvalue()
 
-    def test_should_complain_about_invalid_sources(self):
-        # when
-        with captured_output() as (out, err):
-            with pytest.raises(SystemExit):
-                Plunger(args("--source etherscan,invalid_one,parity_txqueue --wait 0x0000011111222223333322222111110000099999")).main()
-
-        # then
-        assert "Unknown source(s): 'invalid_one'." in err.getvalue()
-
-    def test_should_detect_0_pending_transactions_on_etherscan(self, port_number, datadir):
-        # given
-        web3 = Web3(TestRPCProvider("127.0.0.1", port_number))
-        some_account = web3.eth.accounts[0]
-
-        # when
-        with requests_mock.Mocker(real_http=True) as mock:
-            self.mock_0_pending_txs_on_eterscan(mock, datadir, some_account)
-
-            with captured_output() as (out, err):
-                Plunger(args(f"--rpc-port {port_number} --source etherscan --list {some_account}")).main()
-
-        # then
-        assert out.getvalue() == f"There are no pending transactions on unknown from {some_account}\n"
-
-    def test_should_detect_3_pending_transactions_on_etherscan(self, port_number, datadir):
-        # given
-        web3 = Web3(TestRPCProvider("127.0.0.1", port_number))
-        some_account = web3.eth.accounts[0]
-
-        # when
-        with requests_mock.Mocker(real_http=True) as mock:
-            self.mock_3_pending_txs_on_eterscan(mock, datadir, some_account)
-
-            with captured_output() as (out, err):
-                Plunger(args(f"--rpc-port {port_number} --source etherscan --list {some_account}")).main()
-
-        # then
-        assert out.getvalue() == f"""There are 3 pending transactions on unknown from {some_account}:
-
-                              TxHash                                 Nonce
-==========================================================================
-0x7bc44a24f93df200a3bd172a5a690bec50c215e7a84fa794bacfb61a211d6559       8
-0x72e7a42d3e1b0773f62cfa9ee2bc54ff904a908ac2a668678f9c4880fd046f7a       9
-0x124cb0887d0ea364b402fcc1369b7f9bf4d651bc77d2445aefbeab538dd3aab9      10
-
-"""
-
     def test_should_detect_0_pending_transactions_in_parity_txqueue(self, port_number, datadir):
         # given
         web3 = Web3(TestRPCProvider("127.0.0.1", port_number))
@@ -220,31 +162,6 @@ class TestPlunger:
 
                               TxHash                                 Nonce
 ==========================================================================
-0x72e7a42d3e1b0773f62cfa9ee2bc54ff904a908ac2a668678f9c4880fd046f7a       9
-0x124cb0887d0ea364b402fcc1369b7f9bf4d651bc77d2445aefbeab538dd3aab9      10
-0x53050e62c81fbe440d97d703860096467089bd37b2ad4cc6c699acf217436a64      11
-
-"""
-
-    def test_should_ignore_duplicates_when_using_two_sources(self, port_number, datadir):
-        # given
-        web3 = Web3(TestRPCProvider("127.0.0.1", port_number))
-        some_account = web3.eth.accounts[0]
-
-        # when
-        with requests_mock.Mocker(real_http=True) as mock:
-            self.mock_3_pending_txs_on_eterscan(mock, datadir, some_account)
-            self.mock_3_pending_txs_in_parity_txqueue(mock, datadir, port_number, some_account)
-
-            with captured_output() as (out, err):
-                Plunger(args(f"--rpc-port {port_number} --source etherscan,parity_txqueue --list {some_account}")).main()
-
-        # then
-        assert out.getvalue() == f"""There are 4 pending transactions on unknown from {some_account}:
-
-                              TxHash                                 Nonce
-==========================================================================
-0x7bc44a24f93df200a3bd172a5a690bec50c215e7a84fa794bacfb61a211d6559       8
 0x72e7a42d3e1b0773f62cfa9ee2bc54ff904a908ac2a668678f9c4880fd046f7a       9
 0x124cb0887d0ea364b402fcc1369b7f9bf4d651bc77d2445aefbeab538dd3aab9      10
 0x53050e62c81fbe440d97d703860096467089bd37b2ad4cc6c699acf217436a64      11
