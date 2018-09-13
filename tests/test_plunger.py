@@ -170,7 +170,7 @@ class TestPlunger:
 
     def test_should_ignore_pending_transactions_if_their_nonce_is_already_used(self, port_number, datadir):
         # given
-        web3 = Web3(TestRPCProvider("127.0.0.1", port_number))
+        web3 = Web3(TestRPCProvider("localhost", port_number))
         some_account = web3.eth.accounts[0]
 
         # and
@@ -178,17 +178,19 @@ class TestPlunger:
 
         # when
         with requests_mock.Mocker(real_http=True) as mock:
-            self.mock_3_pending_txs_on_eterscan(mock, datadir, some_account)
+            self.mock_3_pending_txs_in_parity_txqueue(mock, datadir, port_number, some_account)
 
             with captured_output() as (out, err):
-                Plunger(args(f"--rpc-port {port_number} --source etherscan --list {some_account}")).main()
+                Plunger(args(f"--rpc-port {port_number} --list {some_account}")).main()
 
         # then
-        assert out.getvalue() == f"""There is 1 pending transaction on unknown from {some_account}:
+        # Pending transaction with nonce 9 is ignored because last_nonce = 9
+        assert out.getvalue() == f"""There are 2 pending transactions on unknown from {some_account}:
 
                               TxHash                                 Nonce
 ==========================================================================
 0x124cb0887d0ea364b402fcc1369b7f9bf4d651bc77d2445aefbeab538dd3aab9      10
+0x53050e62c81fbe440d97d703860096467089bd37b2ad4cc6c699acf217436a64      11
 
 """
 
