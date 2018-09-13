@@ -38,32 +38,7 @@ class Transaction:
         return hash(self.tx_hash) + hash(self.nonce)
 
 
-class Etherscan:
-    def __init__(self, chain):
-        if chain == "ethlive":
-            self.url = "etherscan.io"
-        elif chain == "kovan":
-            self.url = "kovan.etherscan.io"
-        else:
-            #TODO for unit testing only, let's find a better solution afterwards
-            self.url = "unknown.etherscan.io"
-
-    def list_pending_txs(self, address) -> list:
-        page = requests.get(f"https://{self.url}/txsPending?a={address}")
-        tree = html.fromstring(page.content)
-        tx_ids = tree.xpath('//table[contains(@class,"table")]//td[1]/span[@class="address-tag"]/a/text()')
-        return list(map(self.tx_details, tx_ids))
-
-    def tx_details(self, tx_id) -> Transaction:
-        page = requests.get(f"https://{self.url}/tx/{tx_id}")
-        tree = html.fromstring(page.content)
-        nonce = int(tree.xpath('//span[contains(@title,"The transaction nonce")]/text()')[0].strip())
-        return Transaction(tx_hash=tx_id, nonce=nonce)
-
-
 class Plunger:
-    SOURCE_ETHERSCAN = "etherscan"
-    SOURCE_PARITY_TXQUEUE = "parity_txqueue"
 
     def __init__(self, args: list):
         # Define basic arguments
@@ -72,9 +47,6 @@ class Plunger:
         parser.add_argument("--rpc-host", help="JSON-RPC host (default: `localhost')", default="localhost", type=str)
         parser.add_argument("--rpc-port", help="JSON-RPC port (default: `8545')", default=8545, type=int)
         parser.add_argument("--gas-price", help="Gas price (in Wei) for overriding transactions", default=0, type=int)
-        parser.add_argument("--source", help=f"Comma-separated list of sources to use for pending transaction discovery"
-                                             f" (available: {self.SOURCE_ETHERSCAN}, {self.SOURCE_PARITY_TXQUEUE})",
-                            type=lambda x: x.split(','), required=True)
 
         # Define mutually exclusive action arguments
         action = parser.add_mutually_exclusive_group(required=True)
@@ -82,20 +54,12 @@ class Plunger:
         action.add_argument('--wait', help="Wait for the pending transactions to clear", dest='wait', action='store_true')
         action.add_argument('--override-with-zero-txs', help="Override the pending transactions with zero-value txs", dest='override', action='store_true')
 
-        # Parse the arguments, validate source
+        # Parse the arguments
         self.arguments = parser.parse_args(args)
-        self.validate_sources()
 
         # Initialize web3.py
         self.web3 = Web3(HTTPProvider(endpoint_uri=f"http://{self.arguments.rpc_host}:{self.arguments.rpc_port}"))
         self.web3.eth.defaultAccount = self.arguments.address
-
-    def validate_sources(self):
-        # Check if only correct sources have been listed in the value of the `--source` argument
-        unknown_sources = set(self.arguments.source) - {self.SOURCE_ETHERSCAN, self.SOURCE_PARITY_TXQUEUE}
-        if len(unknown_sources) > 0:
-            print(f"Unknown source(s): {str(unknown_sources).replace('{', '').replace('}', '')}.", file=sys.stderr)
-            exit(-1)
 
     def main(self):
         # Get pending transactions
@@ -186,12 +150,9 @@ class Plunger:
         return self.web3.eth.getTransactionCount(self.web3.eth.defaultAccount)-1
 
     def get_pending_transactions(self) -> list:
-        # Get the list of pending transactions and their details from specified sources
+        # Get the list of pending transactions and their details
         transactions = []
-        if self.SOURCE_ETHERSCAN in self.arguments.source:
-            transactions += self.get_pending_transactions_from_etherscan()
-        if self.SOURCE_PARITY_TXQUEUE in self.arguments.source:
-            transactions += self.get_pending_transactions_from_parity()
+        transactions += self.get_pending_transactions_from_parity()
 
         # Ignore these which have been already mined
         last_nonce = self.get_last_nonce()
@@ -199,10 +160,6 @@ class Plunger:
 
         # Remove duplicates, sort by nonce and tx_hash
         return sorted(set(transactions), key=lambda tx: (tx.nonce, tx.tx_hash))
-
-    def get_pending_transactions_from_etherscan(self) -> list:
-        # Get the list of pending transactions and their details from etherscan.io
-        return Etherscan(self.chain()).list_pending_txs(self.web3.eth.defaultAccount)
 
     def get_pending_transactions_from_parity(self) -> list:
         # Get the list of pending transactions and their details from Parity transaction pool

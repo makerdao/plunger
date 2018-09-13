@@ -21,7 +21,7 @@ to list pending transactions for manual inspection.
 _plunger_ has been created during development of the Maker Keeper Framework.
 It is essential to run each keeper from an individual address that does not
 have any pending transactions. That is why before starting each keeper, doing
-a `plunger --source parity_txqueue --wait 0x.....` is recommended.
+a `plunger --wait 0x.....` is recommended.
 
 If you want to discuss this tool, the best place is the _#keeper_ channel
 in the Maker RocketChat, linked above.
@@ -56,7 +56,7 @@ export LDFLAGS="-L$(brew --prefix openssl)/lib" CFLAGS="-I$(brew --prefix openss
 
 ```
 usage: plunger [-h] [--rpc-host RPC_HOST] [--rpc-port RPC_PORT]
-               [--gas-price GAS_PRICE] --source SOURCE
+               [--gas-price GAS_PRICE]
                (--list | --wait | --override-with-zero-txs)
                address
 
@@ -69,9 +69,6 @@ optional arguments:
   --rpc-port RPC_PORT   JSON-RPC port (default: `8545')
   --gas-price GAS_PRICE
                         Gas price (in Wei) for overriding transactions
-  --source SOURCE       Comma-separated list of sources to use for pending
-                        transaction discovery (available: etherscan,
-                        parity_txqueue)
   --list                List pending transactions
   --wait                Wait for the pending transactions to clear
   --override-with-zero-txs
@@ -84,7 +81,7 @@ If you want _plunger_ to only list pending transactions originating from the spe
 call it with the `--list` argument:
 
 ```bash
-bin/plunger --source etherscan,parity_txqueue --list 0x0101010101010101010101010101010101010101
+bin/plunger --list 0x0101010101010101010101010101010101010101
 ```
 
 ### Waiting for pending transactions to clear
@@ -93,7 +90,7 @@ If you want _plunger_ to just wait for the pending transactions from the specifi
 to get processed by the network (i.e. to get mined), run it with the `--wait` argument:
 
 ```bash
-bin/plunger --source etherscan,parity_txqueue --wait 0x0101010101010101010101010101010101010101
+bin/plunger --wait 0x0101010101010101010101010101010101010101
 ```
 
 This is a completely passive mode i.e. no Ethereum transactions get sent by _plunger_
@@ -109,7 +106,7 @@ If you want _plunger_ to try to override all pending transactions with a zero We
 but with gas cost higher than the original, run it with the `--override-with-zero-txs` argument:
 
 ```bash
-bin/plunger --source etherscan,parity_txqueue --override-with-zero-txs 0x0101010101010101010101010101010101010101
+bin/plunger --override-with-zero-txs 0x0101010101010101010101010101010101010101
 ```
 
 _Plunger_ will send replacement transactions immediately, then it will start monitoring the
@@ -139,15 +136,9 @@ as it is still possible the original one will go through.
 
 ### Pending transactions discovery
 
-The `--source` argument has to be used to specify how _plunger_ should discover pending transactions.
-Currently it can either query _etherscan.io_ (`--source etherscan`) or look for them in the Parity
-transaction queue (`--source parity_txqueue`). Bear in mind that it is a custom _Parity_ RPC endpoint
-and so this latter method will not work with _geth_.
-
-Both discovery methods can be used at the same time (`--source etherscan,parity_txqueue`).
-
-The _etherscan.io_ integration works by scraping their website as the API exposed by them
-does not give access to pending transactions.
+_Plunger_ discovers pending transactions by looking for them in the Parity transaction queue.
+Bear in mind that it is a custom _Parity_ RPC endpoint and so this latter method will not
+work with _geth_.
 
 
 ## Testing
@@ -171,7 +162,7 @@ export ETH_FROM=0x001.......
 seth send --async --gas-price=500000000 --value=1 -F $ETH_FROM $ETH_FROM
 seth send --async --gas-price=500000000 --value=1 -F $ETH_FROM $ETH_FROM
 
-bin/plunger --source parity_txqueue --override-with-zero-txs $ETH_FROM
+bin/plunger --override-with-zero-txs $ETH_FROM
 ```
 
 The above snippet uses `seth` (see <https://github.com/dapphub/seth>) for sending transactions.
