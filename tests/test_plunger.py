@@ -316,7 +316,7 @@ All pending transactions have been mined.
     def test_should_handle_transaction_sending_errors(self, port_number, datadir):
         with captured_output() as (out, err):
             # given
-            web3 = Web3(TestRPCProvider("127.0.0.1", port_number))
+            web3 = Web3(TestRPCProvider("localhost", port_number))
             web3.eth.defaultAccount = web3.eth.accounts[0]
             some_account = web3.eth.accounts[0]
 
@@ -326,24 +326,27 @@ All pending transactions have been mined.
 
             # when
             with requests_mock.Mocker(real_http=True) as mock:
-                self.mock_3_pending_txs_on_eterscan(mock, datadir, some_account)
+                self.mock_3_pending_txs_in_parity_txqueue(mock, datadir, port_number, some_account)
 
-                plunger = Plunger(args(f"--rpc-port {port_number} --source etherscan --override-with-zero-txs {some_account}"))
+                plunger = Plunger(args(f"--rpc-port {port_number} --override-with-zero-txs {some_account}"))
                 plunger.web3 = web3  # we need to set `web3` as it has `sendTransaction` mocked for transaction failure simulation
                 plunger.main()
 
             # then
-            assert out.getvalue() == f"""There is 1 pending transaction on unknown from {some_account}:
+            assert out.getvalue() == f"""There are 2 pending transactions on unknown from {some_account}:
 
                               TxHash                                 Nonce
 ==========================================================================
 0x124cb0887d0ea364b402fcc1369b7f9bf4d651bc77d2445aefbeab538dd3aab9      10
+0x53050e62c81fbe440d97d703860096467089bd37b2ad4cc6c699acf217436a64      11
 
 Failed to send replacement transaction with nonce=10, gas_price=1.
+   Error: Simulated transaction failure
+Failed to send replacement transaction with nonce=11, gas_price=1.
    Error: Simulated transaction failure
 Waiting for the transactions to get mined...
 All pending transactions have been mined.
 """
 
             # and
-            assert web3.eth.getTransactionCount(some_account) == 11
+            assert web3.eth.getTransactionCount(some_account) == 12
