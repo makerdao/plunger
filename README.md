@@ -174,7 +174,7 @@ seth send --async --gas-price=500000000 --value=1 -F $ETH_FROM $ETH_FROM
 bin/plunger --source parity_txqueue --override-with-zero-txs $ETH_FROM
 ```
 
-The above snippet uses `seth` (see <https://github.com/dapphub/seth>) for sending transactions.
+The above snippet uses `seth` (see <https://github.com/dapphub/dapptools/tree/master/src/seth>) for sending transactions.
 
 
 ## License
