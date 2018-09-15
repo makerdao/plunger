@@ -132,7 +132,7 @@ class TestPlunger:
 
     def test_should_detect_0_pending_transactions_in_parity_txqueue(self, port_number, datadir):
         # given
-        web3 = Web3(TestRPCProvider("127.0.0.1", port_number))
+        web3 = Web3(TestRPCProvider("localhost", port_number))
         some_account = web3.eth.accounts[0]
 
         # when
@@ -147,7 +147,7 @@ class TestPlunger:
 
     def test_should_detect_3_pending_transactions_in_parity_txqueue(self, port_number, datadir):
         # given
-        web3 = Web3(TestRPCProvider("127.0.0.1", port_number))
+        web3 = Web3(TestRPCProvider("localhost", port_number))
         some_account = web3.eth.accounts[0]
 
         # when
@@ -198,7 +198,7 @@ class TestPlunger:
     def test_wait_should_not_terminate_until_transactions_get_mined(self, port_number, datadir):
         with captured_output() as (out, err):
             # given
-            web3 = Web3(TestRPCProvider("127.0.0.1", port_number))
+            web3 = Web3(TestRPCProvider("localhost", port_number))
             some_account = web3.eth.accounts[0]
 
             # when
@@ -243,7 +243,7 @@ All pending transactions have been mined.
     def test_should_override_transactions(self, port_number, datadir):
         with captured_output() as (out, err):
             # given
-            web3 = Web3(TestRPCProvider("127.0.0.1", port_number))
+            web3 = Web3(TestRPCProvider("localhost", port_number))
             web3.eth.defaultAccount = web3.eth.accounts[0]
             some_account = web3.eth.accounts[0]
 
@@ -280,7 +280,7 @@ All pending transactions have been mined.
     def test_should_use_custom_gas_price_when_overriding_transactions(self, port_number, datadir):
         with captured_output() as (out, err):
             # given
-            web3 = Web3(TestRPCProvider("127.0.0.1", port_number))
+            web3 = Web3(TestRPCProvider("localhost", port_number))
             web3.eth.defaultAccount = web3.eth.accounts[0]
             some_account = web3.eth.accounts[0]
             some_gas_price = 150000000
