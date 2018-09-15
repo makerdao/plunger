@@ -101,9 +101,9 @@ class Plunger:
 
     def override(self, transactions: list):
         # Override all pending transactions with zero-wei transfer transactions
+        gas_price = self.web3.eth.gasPrice if self.arguments.gas_price == 0 else self.arguments.gas_price
         for nonce in self.unique_nonces(transactions):
             try:
-                gas_price = self.web3.eth.gasPrice if self.arguments.gas_price == 0 else self.arguments.gas_price
                 tx_hash = self.web3.eth.sendTransaction({'from': self.web3.eth.defaultAccount,
                                                          'to': self.web3.eth.defaultAccount,
                                                          'gasPrice': gas_price,
