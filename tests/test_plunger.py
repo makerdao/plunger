@@ -110,21 +110,11 @@ class TestPlunger:
         assert "usage: plunger" in err.getvalue()
         assert "error: the following arguments are required: address" in err.getvalue()
 
-    def test_should_complain_about_missing_source_when_only_address_specified(self):
+    def test_should_complain_about_missing_mode_when_only_address_specified(self):
         # when
         with captured_output() as (out, err):
             with pytest.raises(SystemExit):
                 Plunger(args("0x0000011111222223333322222111110000099999")).main()
-
-        # then
-        assert "usage: plunger" in err.getvalue()
-        assert "error: the following arguments are required: --source" in err.getvalue()
-
-    def test_should_complain_about_missing_mode_when_only_address_and_source_specified(self):
-        # when
-        with captured_output() as (out, err):
-            with pytest.raises(SystemExit):
-                Plunger(args("--source etherscan 0x0000011111222223333322222111110000099999")).main()
 
         # then
         assert "usage: plunger" in err.getvalue()
@@ -140,7 +130,7 @@ class TestPlunger:
             self.mock_0_pending_txs_in_parity_txqueue(mock, datadir, port_number)
 
             with captured_output() as (out, err):
-                Plunger(args(f"--rpc-port {port_number} --source parity_txqueue --list {some_account}")).main()
+                Plunger(args(f"--rpc-port {port_number} --list {some_account}")).main()
 
         # then
         assert out.getvalue() == f"There are no pending transactions on unknown from {some_account}\n"
@@ -155,7 +145,7 @@ class TestPlunger:
             self.mock_3_pending_txs_in_parity_txqueue(mock, datadir, port_number, some_account)
 
             with captured_output() as (out, err):
-                Plunger(args(f"--rpc-port {port_number} --source parity_txqueue --list {some_account}")).main()
+                Plunger(args(f"--rpc-port {port_number} --list {some_account}")).main()
 
         # then
         assert out.getvalue() == f"""There are 3 pending transactions on unknown from {some_account}:
