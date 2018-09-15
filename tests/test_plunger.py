@@ -33,17 +33,6 @@ from plunger.plunger import Plunger
 last_port_number = 28545
 
 
-@contextmanager
-def captured_output():
-    new_out, new_err = StringIO(), StringIO()
-    old_out, old_err = sys.stdout, sys.stderr
-    try:
-        sys.stdout, sys.stderr = new_out, new_err
-        yield sys.stdout, sys.stderr
-    finally:
-        sys.stdout, sys.stderr = old_out, old_err
-
-
 @fixture
 def datadir(request):
     return py.path.local(request.module.__file__).join("..").join("data")
@@ -100,27 +89,27 @@ class TestPlunger:
         response = response.replace('OUR_ADDRESS', account.upper())
         mock.post(f"http://localhost:{port_number}/rpc", text=response)
 
-    def test_should_print_usage_when_no_arguments(self):
+    def test_should_print_usage_when_no_arguments(self, capsys):
         # when
-        with captured_output() as (out, err):
-            with pytest.raises(SystemExit):
-                Plunger(args("")).main()
+        with pytest.raises(SystemExit):
+            Plunger(args("")).main()
 
         # then
-        assert "usage: plunger" in err.getvalue()
-        assert "error: the following arguments are required: address" in err.getvalue()
+        out = capsys.readouterr()[1]  # Difference here is argparse is handling the messaging
+        assert "usage: plunger" in out
+        assert "error: the following arguments are required: address" in out
 
-    def test_should_complain_about_missing_mode_when_only_address_specified(self):
+    def test_should_complain_about_missing_mode_when_only_address_specified(self, capsys):
         # when
-        with captured_output() as (out, err):
-            with pytest.raises(SystemExit):
-                Plunger(args("0x0000011111222223333322222111110000099999")).main()
+        with pytest.raises(SystemExit):
+            Plunger(args("0x0000011111222223333322222111110000099999")).main()
 
         # then
-        assert "usage: plunger" in err.getvalue()
-        assert "error: one of the arguments --list --wait --override-with-zero-txs is required" in err.getvalue()
+        out = capsys.readouterr()[1]  # Difference here is argparse is handling the messaging
+        assert "usage: plunger" in out
+        assert "error: one of the arguments --list --wait --override-with-zero-txs is required" in out
 
-    def test_should_detect_0_pending_transactions_in_parity_txqueue(self, port_number, datadir):
+    def test_should_detect_0_pending_transactions_in_parity_txqueue(self, capsys, port_number, datadir):
         # given
         web3 = Web3(TestRPCProvider("localhost", port_number))
         some_account = web3.eth.accounts[0]
@@ -129,13 +118,12 @@ class TestPlunger:
         with requests_mock.Mocker(real_http=True) as mock:
             self.mock_0_pending_txs_in_parity_txqueue(mock, datadir, port_number)
 
-            with captured_output() as (out, err):
-                Plunger(args(f"--rpc-port {port_number} --list {some_account}")).main()
+            Plunger(args(f"--rpc-port {port_number} --list {some_account}")).main()
 
         # then
-        assert out.getvalue() == f"There are no pending transactions on unknown from {some_account}\n"
+        assert capsys.readouterr().out == f"There are no pending transactions on unknown from {some_account}\n"
 
-    def test_should_detect_3_pending_transactions_in_parity_txqueue(self, port_number, datadir):
+    def test_should_detect_3_pending_transactions_in_parity_txqueue(self, capsys, port_number, datadir):
         # given
         web3 = Web3(TestRPCProvider("localhost", port_number))
         some_account = web3.eth.accounts[0]
@@ -144,11 +132,10 @@ class TestPlunger:
         with requests_mock.Mocker(real_http=True) as mock:
             self.mock_3_pending_txs_in_parity_txqueue(mock, datadir, port_number, some_account)
 
-            with captured_output() as (out, err):
-                Plunger(args(f"--rpc-port {port_number} --list {some_account}")).main()
+            Plunger(args(f"--rpc-port {port_number} --list {some_account}")).main()
 
         # then
-        assert out.getvalue() == f"""There are 3 pending transactions on unknown from {some_account}:
+        assert capsys.readouterr().out == f"""There are 3 pending transactions on unknown from {some_account}:
 
                               TxHash                                 Nonce
 ==========================================================================
@@ -158,7 +145,7 @@ class TestPlunger:
 
 """
 
-    def test_should_ignore_pending_transactions_if_their_nonce_is_already_used(self, port_number, datadir):
+    def test_should_ignore_pending_transactions_if_their_nonce_is_already_used(self, capsys, port_number, datadir):
         # given
         web3 = Web3(TestRPCProvider("localhost", port_number))
         some_account = web3.eth.accounts[0]
@@ -170,12 +157,11 @@ class TestPlunger:
         with requests_mock.Mocker(real_http=True) as mock:
             self.mock_3_pending_txs_in_parity_txqueue(mock, datadir, port_number, some_account)
 
-            with captured_output() as (out, err):
-                Plunger(args(f"--rpc-port {port_number} --list {some_account}")).main()
+            Plunger(args(f"--rpc-port {port_number} --list {some_account}")).main()
 
         # then
         # Pending transaction with nonce 9 is ignored because last_nonce = 9
-        assert out.getvalue() == f"""There are 2 pending transactions on unknown from {some_account}:
+        assert capsys.readouterr().out == f"""There are 2 pending transactions on unknown from {some_account}:
 
                               TxHash                                 Nonce
 ==========================================================================
@@ -185,21 +171,20 @@ class TestPlunger:
 """
 
     @pytest.mark.timeout(20)
-    def test_wait_should_not_terminate_until_transactions_get_mined(self, port_number, datadir):
-        with captured_output() as (out, err):
-            # given
-            web3 = Web3(TestRPCProvider("localhost", port_number))
-            some_account = web3.eth.accounts[0]
+    def test_wait_should_not_terminate_until_transactions_get_mined(self, capsys, port_number, datadir):
+        # given
+        web3 = Web3(TestRPCProvider("localhost", port_number))
+        some_account = web3.eth.accounts[0]
 
-            # when
-            with requests_mock.Mocker(real_http=True) as mock:
-                self.mock_3_pending_txs_in_parity_txqueue(mock, datadir, port_number, some_account)
+        # when
+        with requests_mock.Mocker(real_http=True) as mock:
+            self.mock_3_pending_txs_in_parity_txqueue(mock, datadir, port_number, some_account)
 
-                threading.Thread(target=lambda: Plunger(args(f"--rpc-port {port_number} --wait {some_account}")).main()).start()
-                time.sleep(7)
+            threading.Thread(target=lambda: Plunger(args(f"--rpc-port {port_number} --wait {some_account}")).main()).start()
+            time.sleep(7)
 
-            # then
-            assert out.getvalue() == f"""There are 3 pending transactions on unknown from {some_account}:
+        # then
+        assert capsys.readouterr().out == f"""There are 3 pending transactions on unknown from {some_account}:
 
                               TxHash                                 Nonce
 ==========================================================================
@@ -210,47 +195,36 @@ class TestPlunger:
 Waiting for the transactions to get mined...
 """
 
-            # when
-            self.simulate_transactions(web3, 12)
+        # when
+        self.simulate_transactions(web3, 12)
 
-            # and
-            time.sleep(4)
+        # and
+        time.sleep(4)
 
-            # then
-            assert out.getvalue() == f"""There are 3 pending transactions on unknown from {some_account}:
-
-                              TxHash                                 Nonce
-==========================================================================
-0x72e7a42d3e1b0773f62cfa9ee2bc54ff904a908ac2a668678f9c4880fd046f7a       9
-0x124cb0887d0ea364b402fcc1369b7f9bf4d651bc77d2445aefbeab538dd3aab9      10
-0x53050e62c81fbe440d97d703860096467089bd37b2ad4cc6c699acf217436a64      11
-
-Waiting for the transactions to get mined...
-All pending transactions have been mined.
-"""
+        # then
+        assert capsys.readouterr().out == "All pending transactions have been mined.\n"
 
     @pytest.mark.timeout(20)
-    def test_should_override_transactions(self, port_number, datadir):
-        with captured_output() as (out, err):
-            # given
-            web3 = Web3(TestRPCProvider("localhost", port_number))
-            web3.eth.defaultAccount = web3.eth.accounts[0]
-            some_account = web3.eth.accounts[0]
+    def test_should_override_transactions(self, capsys, port_number, datadir):
+        # given
+        web3 = Web3(TestRPCProvider("localhost", port_number))
+        web3.eth.defaultAccount = web3.eth.accounts[0]
+        some_account = web3.eth.accounts[0]
 
-            # and
-            self.simulate_transactions(web3, 10)
-            self.ensure_transactions(web3, [10, 11], 1)
+        # and
+        self.simulate_transactions(web3, 10)
+        self.ensure_transactions(web3, [10, 11], 1)
 
-            # when
-            with requests_mock.Mocker(real_http=True) as mock:
-                self.mock_3_pending_txs_in_parity_txqueue(mock, datadir, port_number, some_account)
+        # when
+        with requests_mock.Mocker(real_http=True) as mock:
+            self.mock_3_pending_txs_in_parity_txqueue(mock, datadir, port_number, some_account)
 
-                plunger = Plunger(args(f"--rpc-port {port_number} --override-with-zero-txs {some_account}"))
-                plunger.web3 = web3  # we need to set `web3` as it has `sendTransaction` mocked for nonce comparison
-                plunger.main()
+            plunger = Plunger(args(f"--rpc-port {port_number} --override-with-zero-txs {some_account}"))
+            plunger.web3 = web3  # we need to set `web3` as it has `sendTransaction` mocked for nonce comparison
+            plunger.main()
 
-            # then
-            assert re.match(f"""There are 2 pending transactions on unknown from {some_account}:
+        # then
+        assert re.match(f"""There are 2 pending transactions on unknown from {some_account}:
 
                               TxHash                                 Nonce
 ==========================================================================
@@ -261,34 +235,33 @@ Sent replacement transaction with nonce=10, gas_price=1, tx_hash=0x[0-9a-f]{{64}
 Sent replacement transaction with nonce=11, gas_price=1, tx_hash=0x[0-9a-f]{{64}}.
 Waiting for the transactions to get mined...
 All pending transactions have been mined.
-""", out.getvalue(), re.MULTILINE)
+""", capsys.readouterr().out, re.MULTILINE)
 
-            # and
-            assert web3.eth.getTransactionCount(some_account) == 12
+        # and
+        assert web3.eth.getTransactionCount(some_account) == 12
 
     @pytest.mark.timeout(20)
-    def test_should_use_custom_gas_price_when_overriding_transactions(self, port_number, datadir):
-        with captured_output() as (out, err):
-            # given
-            web3 = Web3(TestRPCProvider("localhost", port_number))
-            web3.eth.defaultAccount = web3.eth.accounts[0]
-            some_account = web3.eth.accounts[0]
-            some_gas_price = 150000000
+    def test_should_use_custom_gas_price_when_overriding_transactions(self, capsys, port_number, datadir):
+        # given
+        web3 = Web3(TestRPCProvider("localhost", port_number))
+        web3.eth.defaultAccount = web3.eth.accounts[0]
+        some_account = web3.eth.accounts[0]
+        some_gas_price = 150000000
 
-            # and
-            self.simulate_transactions(web3, 11)
-            self.ensure_transactions(web3, [11], some_gas_price)
+        # and
+        self.simulate_transactions(web3, 11)
+        self.ensure_transactions(web3, [11], some_gas_price)
 
-            # when
-            with requests_mock.Mocker(real_http=True) as mock:
-                self.mock_3_pending_txs_in_parity_txqueue(mock, datadir, port_number, some_account)
+        # when
+        with requests_mock.Mocker(real_http=True) as mock:
+            self.mock_3_pending_txs_in_parity_txqueue(mock, datadir, port_number, some_account)
 
-                plunger = Plunger(args(f"--rpc-port {port_number} --override-with-zero-txs --gas-price {some_gas_price} {some_account}"))
-                plunger.web3 = web3  # we need to set `web3` as it has `sendTransaction` mocked for nonce comparison
-                plunger.main()
+            plunger = Plunger(args(f"--rpc-port {port_number} --override-with-zero-txs --gas-price {some_gas_price} {some_account}"))
+            plunger.web3 = web3  # we need to set `web3` as it has `sendTransaction` mocked for nonce comparison
+            plunger.main()
 
-            # then
-            assert re.match(f"""There is 1 pending transaction on unknown from {some_account}:
+        # then
+        assert re.match(f"""There is 1 pending transaction on unknown from {some_account}:
 
                               TxHash                                 Nonce
 ==========================================================================
@@ -297,33 +270,32 @@ All pending transactions have been mined.
 Sent replacement transaction with nonce=11, gas_price={some_gas_price}, tx_hash=0x[0-9a-f]{{64}}.
 Waiting for the transactions to get mined...
 All pending transactions have been mined.
-""", out.getvalue(), re.MULTILINE)
+""", capsys.readouterr().out, re.MULTILINE)
 
-            # and
-            assert web3.eth.getTransactionCount(some_account) == 12
+        # and
+        assert web3.eth.getTransactionCount(some_account) == 12
 
     @pytest.mark.timeout(20)
-    def test_should_handle_transaction_sending_errors(self, port_number, datadir):
-        with captured_output() as (out, err):
-            # given
-            web3 = Web3(TestRPCProvider("localhost", port_number))
-            web3.eth.defaultAccount = web3.eth.accounts[0]
-            some_account = web3.eth.accounts[0]
+    def test_should_handle_transaction_sending_errors(self, capsys, port_number, datadir):
+        # given
+        web3 = Web3(TestRPCProvider("localhost", port_number))
+        web3.eth.defaultAccount = web3.eth.accounts[0]
+        some_account = web3.eth.accounts[0]
 
-            # and
-            self.simulate_transactions(web3, 10)
-            self.ensure_transactions_fail(web3, "Simulated transaction failure")
+        # and
+        self.simulate_transactions(web3, 10)
+        self.ensure_transactions_fail(web3, "Simulated transaction failure")
 
-            # when
-            with requests_mock.Mocker(real_http=True) as mock:
-                self.mock_3_pending_txs_in_parity_txqueue(mock, datadir, port_number, some_account)
+        # when
+        with requests_mock.Mocker(real_http=True) as mock:
+            self.mock_3_pending_txs_in_parity_txqueue(mock, datadir, port_number, some_account)
 
-                plunger = Plunger(args(f"--rpc-port {port_number} --override-with-zero-txs {some_account}"))
-                plunger.web3 = web3  # we need to set `web3` as it has `sendTransaction` mocked for transaction failure simulation
-                plunger.main()
+            plunger = Plunger(args(f"--rpc-port {port_number} --override-with-zero-txs {some_account}"))
+            plunger.web3 = web3  # we need to set `web3` as it has `sendTransaction` mocked for transaction failure simulation
+            plunger.main()
 
-            # then
-            assert out.getvalue() == f"""There are 2 pending transactions on unknown from {some_account}:
+        # then
+        assert capsys.readouterr().out == f"""There are 2 pending transactions on unknown from {some_account}:
 
                               TxHash                                 Nonce
 ==========================================================================
@@ -338,5 +310,5 @@ Waiting for the transactions to get mined...
 All pending transactions have been mined.
 """
 
-            # and
-            assert web3.eth.getTransactionCount(some_account) == 12
+        # and
+        assert web3.eth.getTransactionCount(some_account) == 12
