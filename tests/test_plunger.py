@@ -203,9 +203,9 @@ class TestPlunger:
 
             # when
             with requests_mock.Mocker(real_http=True) as mock:
-                self.mock_3_pending_txs_on_eterscan(mock, datadir, some_account)
+                self.mock_3_pending_txs_in_parity_txqueue(mock, datadir, port_number, some_account)
 
-                threading.Thread(target=lambda: Plunger(args(f"--rpc-port {port_number} --source etherscan --wait {some_account}")).main()).start()
+                threading.Thread(target=lambda: Plunger(args(f"--rpc-port {port_number} --wait {some_account}")).main()).start()
                 time.sleep(7)
 
             # then
@@ -213,15 +213,15 @@ class TestPlunger:
 
                               TxHash                                 Nonce
 ==========================================================================
-0x7bc44a24f93df200a3bd172a5a690bec50c215e7a84fa794bacfb61a211d6559       8
 0x72e7a42d3e1b0773f62cfa9ee2bc54ff904a908ac2a668678f9c4880fd046f7a       9
 0x124cb0887d0ea364b402fcc1369b7f9bf4d651bc77d2445aefbeab538dd3aab9      10
+0x53050e62c81fbe440d97d703860096467089bd37b2ad4cc6c699acf217436a64      11
 
 Waiting for the transactions to get mined...
 """
 
             # when
-            self.simulate_transactions(web3, 11)
+            self.simulate_transactions(web3, 12)
 
             # and
             time.sleep(4)
@@ -231,9 +231,9 @@ Waiting for the transactions to get mined...
 
                               TxHash                                 Nonce
 ==========================================================================
-0x7bc44a24f93df200a3bd172a5a690bec50c215e7a84fa794bacfb61a211d6559       8
 0x72e7a42d3e1b0773f62cfa9ee2bc54ff904a908ac2a668678f9c4880fd046f7a       9
 0x124cb0887d0ea364b402fcc1369b7f9bf4d651bc77d2445aefbeab538dd3aab9      10
+0x53050e62c81fbe440d97d703860096467089bd37b2ad4cc6c699acf217436a64      11
 
 Waiting for the transactions to get mined...
 All pending transactions have been mined.
@@ -248,14 +248,14 @@ All pending transactions have been mined.
             some_account = web3.eth.accounts[0]
 
             # and
-            self.simulate_transactions(web3, 9)
-            self.ensure_transactions(web3, [9, 10], 1)
+            self.simulate_transactions(web3, 10)
+            self.ensure_transactions(web3, [10, 11], 1)
 
             # when
             with requests_mock.Mocker(real_http=True) as mock:
-                self.mock_3_pending_txs_on_eterscan(mock, datadir, some_account)
+                self.mock_3_pending_txs_in_parity_txqueue(mock, datadir, port_number, some_account)
 
-                plunger = Plunger(args(f"--rpc-port {port_number} --source etherscan --override-with-zero-txs {some_account}"))
+                plunger = Plunger(args(f"--rpc-port {port_number} --override-with-zero-txs {some_account}"))
                 plunger.web3 = web3  # we need to set `web3` as it has `sendTransaction` mocked for nonce comparison
                 plunger.main()
 
@@ -264,17 +264,17 @@ All pending transactions have been mined.
 
                               TxHash                                 Nonce
 ==========================================================================
-0x72e7a42d3e1b0773f62cfa9ee2bc54ff904a908ac2a668678f9c4880fd046f7a       9
 0x124cb0887d0ea364b402fcc1369b7f9bf4d651bc77d2445aefbeab538dd3aab9      10
+0x53050e62c81fbe440d97d703860096467089bd37b2ad4cc6c699acf217436a64      11
 
-Sent replacement transaction with nonce=9, gas_price=1, tx_hash=0x[0-9a-f]{{64}}.
 Sent replacement transaction with nonce=10, gas_price=1, tx_hash=0x[0-9a-f]{{64}}.
+Sent replacement transaction with nonce=11, gas_price=1, tx_hash=0x[0-9a-f]{{64}}.
 Waiting for the transactions to get mined...
 All pending transactions have been mined.
 """, out.getvalue(), re.MULTILINE)
 
             # and
-            assert web3.eth.getTransactionCount(some_account) == 11
+            assert web3.eth.getTransactionCount(some_account) == 12
 
     @pytest.mark.timeout(20)
     def test_should_use_custom_gas_price_when_overriding_transactions(self, port_number, datadir):
@@ -286,14 +286,14 @@ All pending transactions have been mined.
             some_gas_price = 150000000
 
             # and
-            self.simulate_transactions(web3, 10)
-            self.ensure_transactions(web3, [10], some_gas_price)
+            self.simulate_transactions(web3, 11)
+            self.ensure_transactions(web3, [11], some_gas_price)
 
             # when
             with requests_mock.Mocker(real_http=True) as mock:
-                self.mock_3_pending_txs_on_eterscan(mock, datadir, some_account)
+                self.mock_3_pending_txs_in_parity_txqueue(mock, datadir, port_number, some_account)
 
-                plunger = Plunger(args(f"--rpc-port {port_number} --source etherscan --override-with-zero-txs --gas-price {some_gas_price} {some_account}"))
+                plunger = Plunger(args(f"--rpc-port {port_number} --override-with-zero-txs --gas-price {some_gas_price} {some_account}"))
                 plunger.web3 = web3  # we need to set `web3` as it has `sendTransaction` mocked for nonce comparison
                 plunger.main()
 
@@ -302,15 +302,15 @@ All pending transactions have been mined.
 
                               TxHash                                 Nonce
 ==========================================================================
-0x124cb0887d0ea364b402fcc1369b7f9bf4d651bc77d2445aefbeab538dd3aab9      10
+0x53050e62c81fbe440d97d703860096467089bd37b2ad4cc6c699acf217436a64      11
 
-Sent replacement transaction with nonce=10, gas_price={some_gas_price}, tx_hash=0x[0-9a-f]{{64}}.
+Sent replacement transaction with nonce=11, gas_price={some_gas_price}, tx_hash=0x[0-9a-f]{{64}}.
 Waiting for the transactions to get mined...
 All pending transactions have been mined.
 """, out.getvalue(), re.MULTILINE)
 
             # and
-            assert web3.eth.getTransactionCount(some_account) == 11
+            assert web3.eth.getTransactionCount(some_account) == 12
 
     @pytest.mark.timeout(20)
     def test_should_handle_transaction_sending_errors(self, port_number, datadir):
