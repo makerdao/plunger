@@ -137,7 +137,7 @@ as it is still possible the original one will go through.
 ### Pending transactions discovery
 
 _Plunger_ discovers pending transactions by looking for them in the Parity transaction queue.
-Bear in mind that it is a custom _Parity_ RPC endpoint and so this latter method will not
+Bear in mind that it is a custom _Parity_ RPC endpoint and so this method will not
 work with _geth_.
 
 
