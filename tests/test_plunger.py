@@ -26,7 +26,7 @@ import py
 import pytest
 import requests_mock
 from pytest import fixture
-from web3 import TestRPCProvider, Web3
+from web3 import EthereumTesterProvider, Web3
 
 from plunger.plunger import Plunger
 
@@ -152,7 +152,7 @@ class TestPlunger:
 
     def test_should_detect_0_pending_transactions_on_etherscan(self, port_number, datadir):
         # given
-        web3 = Web3(TestRPCProvider("127.0.0.1", port_number))
+        web3 = Web3(EthereumTesterProvider())
         some_account = web3.eth.accounts[0]
 
         # when
@@ -167,7 +167,7 @@ class TestPlunger:
 
     def test_should_detect_3_pending_transactions_on_etherscan(self, port_number, datadir):
         # given
-        web3 = Web3(TestRPCProvider("127.0.0.1", port_number))
+        web3 = Web3(EthereumTesterProvider())
         some_account = web3.eth.accounts[0]
 
         # when
@@ -190,7 +190,7 @@ class TestPlunger:
 
     def test_should_detect_0_pending_transactions_in_parity_txqueue(self, port_number, datadir):
         # given
-        web3 = Web3(TestRPCProvider("127.0.0.1", port_number))
+        web3 = Web3(EthereumTesterProvider())
         some_account = web3.eth.accounts[0]
 
         # when
@@ -205,7 +205,7 @@ class TestPlunger:
 
     def test_should_detect_3_pending_transactions_in_parity_txqueue(self, port_number, datadir):
         # given
-        web3 = Web3(TestRPCProvider("127.0.0.1", port_number))
+        web3 = Web3(EthereumTesterProvider())
         some_account = web3.eth.accounts[0]
 
         # when
@@ -228,7 +228,7 @@ class TestPlunger:
 
     def test_should_ignore_duplicates_when_using_two_sources(self, port_number, datadir):
         # given
-        web3 = Web3(TestRPCProvider("127.0.0.1", port_number))
+        web3 = Web3(EthereumTesterProvider())
         some_account = web3.eth.accounts[0]
 
         # when
@@ -253,7 +253,7 @@ class TestPlunger:
 
     def test_should_ignore_pending_transactions_if_their_nonce_is_already_used(self, port_number, datadir):
         # given
-        web3 = Web3(TestRPCProvider("127.0.0.1", port_number))
+        web3 = Web3(EthereumTesterProvider())
         some_account = web3.eth.accounts[0]
 
         # and
@@ -279,7 +279,7 @@ class TestPlunger:
     def test_wait_should_not_terminate_until_transactions_get_mined(self, port_number, datadir):
         with captured_output() as (out, err):
             # given
-            web3 = Web3(TestRPCProvider("127.0.0.1", port_number))
+            web3 = Web3(EthereumTesterProvider())
             some_account = web3.eth.accounts[0]
 
             # when
@@ -324,7 +324,7 @@ All pending transactions have been mined.
     def test_should_override_transactions(self, port_number, datadir):
         with captured_output() as (out, err):
             # given
-            web3 = Web3(TestRPCProvider("127.0.0.1", port_number))
+            web3 = Web3(EthereumTesterProvider())
             web3.eth.defaultAccount = web3.eth.accounts[0]
             some_account = web3.eth.accounts[0]
 
@@ -361,7 +361,7 @@ All pending transactions have been mined.
     def test_should_use_custom_gas_price_when_overriding_transactions(self, port_number, datadir):
         with captured_output() as (out, err):
             # given
-            web3 = Web3(TestRPCProvider("127.0.0.1", port_number))
+            web3 = Web3(EthereumTesterProvider())
             web3.eth.defaultAccount = web3.eth.accounts[0]
             some_account = web3.eth.accounts[0]
             some_gas_price = 150000000
@@ -397,7 +397,7 @@ All pending transactions have been mined.
     def test_should_handle_transaction_sending_errors(self, port_number, datadir):
         with captured_output() as (out, err):
             # given
-            web3 = Web3(TestRPCProvider("127.0.0.1", port_number))
+            web3 = Web3(EthereumTesterProvider())
             web3.eth.defaultAccount = web3.eth.accounts[0]
             some_account = web3.eth.accounts[0]
 
