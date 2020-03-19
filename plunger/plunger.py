@@ -21,6 +21,7 @@ import time
 
 import requests
 from lxml import html
+from plunger.keys import register_key
 from texttable import Texttable
 from web3 import Web3, HTTPProvider
 
@@ -82,13 +83,21 @@ class Plunger:
         action.add_argument('--wait', help="Wait for the pending transactions to clear", dest='wait', action='store_true')
         action.add_argument('--override-with-zero-txs', help="Override the pending transactions with zero-value txs", dest='override', action='store_true')
 
+        parser.add_argument("--eth-key", type=str,
+                            help="Ethereum private key to use (e.g. 'key_file=aaa.json,pass_file=aaa.pass') for unlocking account")
         # Parse the arguments, validate source
         self.arguments = parser.parse_args(args)
         self.validate_sources()
 
         # Initialize web3.py
-        self.web3 = Web3(HTTPProvider(endpoint_uri=f"http://{self.arguments.rpc_host}:{self.arguments.rpc_port}"))
+        if self.arguments.rpc_host.startswith("http"):
+            endpoint_uri = f"{self.arguments.rpc_host}:{self.arguments.rpc_port}"
+        else:
+            endpoint_uri = f"http://{self.arguments.rpc_host}:{self.arguments.rpc_port}"
+        self.web3 = Web3(HTTPProvider(endpoint_uri=endpoint_uri))
         self.web3.eth.defaultAccount = self.arguments.address
+        if self.arguments.eth_key:
+            register_key(self.web3, self.arguments.eth_key)
 
     def validate_sources(self):
         # Check if only correct sources have been listed in the value of the `--source` argument
@@ -208,7 +217,7 @@ class Plunger:
         # Get the list of pending transactions and their details from Parity transaction pool
         # First, execute the RPC call and get the response
         request = {"method": "parity_pendingTransactions", "params": [], "id": 1, "jsonrpc": "2.0"}
-        response = requests.post(self.web3.providers[0].endpoint_uri + "/rpc", None, request).json()
+        response = requests.post(self.web3.provider.endpoint_uri + "/rpc", None, request).json()
 
         # Then extract pending transactions sent by us from the response and convert them into `Transaction` objects
         items = response['result']
