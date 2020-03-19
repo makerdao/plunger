@@ -76,6 +76,9 @@ optional arguments:
   --wait                Wait for the pending transactions to clear
   --override-with-zero-txs
                         Override the pending transactions with zero-value txs
+  --eth-key ETH_KEY     Ethereum private key to use (e.g.
+                        'key_file=aaa.json,pass_file=aaa.pass') for unlocking
+                        account
 ```
 
 ### Listing pending transactions
@@ -124,7 +127,7 @@ connectivity issues) _plunger_ terminates before all pending transactions from t
 address get mined, it will return a non-zero exit code.
 
 The account specified has to be unlocked for _plunger_ to be able to sign and send replacement
-transactions.
+transactions; use `--eth-key` parameter to unlock the account.
 
 ### Gas price
 
