@@ -35,7 +35,7 @@ In order to clone the project and install required third-party packages please e
 ```
 git clone https://github.com/makerdao/plunger.git
 cd plunger
-pip3 install -r requirements.txt
+./install.sh
 ```
 
 ### Known macOS issues
