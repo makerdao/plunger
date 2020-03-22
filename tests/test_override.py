@@ -78,11 +78,11 @@ def args(arguments):
 
 class TestPlunger(TestPlungerUtils):
 
+    @pytest.mark.skip("plunger.main() waits indefinitely")
     @pytest.mark.timeout(20)
     def test_should_override_transactions(self, web3, port_number, datadir):
         with captured_output() as (out, err):
             # given
-            # web3 = Web3(EthereumTesterProvider(ethereum_tester=EthereumTester()))
             web3.eth.defaultAccount = web3.eth.accounts[0]
             some_account = web3.eth.accounts[0]
 
