@@ -26,8 +26,9 @@ import py
 import pytest
 import requests_mock
 from pytest import fixture
-from web3 import TestRPCProvider, Web3
+from web3 import HTTPProvider, Web3
 
+from plunger.keys import register_key
 from plunger.plunger import Plunger
 
 last_port_number = 28545
@@ -44,6 +45,18 @@ def captured_output():
         sys.stdout, sys.stderr = old_out, old_err
 
 
+@fixture(scope="session")
+def web3():
+    web3 = Web3(HTTPProvider("http://0.0.0.0:8545"))
+    web3.eth.defaultAccount = "0x6c626f45e3b7aE5A3998478753634790fd0E82EE"
+    register_key(web3, "key_file=tests/data/key1.json,pass_file=/dev/null")
+    register_key(web3, "key_file=tests/data/key2.json,pass_file=/dev/null")
+    assert len(web3.eth.accounts) > 1
+    assert isinstance(web3.eth.accounts[0], str)
+    assert isinstance(web3.eth.accounts[1], str)
+    return web3
+
+
 @fixture
 def datadir(request):
     return py.path.local(request.module.__file__).join("..").join("data")
@@ -51,16 +64,67 @@ def datadir(request):
 
 @fixture
 def port_number():
-    global last_port_number
-    last_port_number += 1
-    return last_port_number
+    # global last_port_number
+    # last_port_number += 1
+    # return last_port_number
+    return 8545
 
 
 def args(arguments):
     return arguments.split()
 
+class TestPlungerUtils:
+    @staticmethod
+    def simulate_transactions(web3, number_of_transactions: int):
+        for no in range(0, number_of_transactions):
+            web3.eth.sendTransaction({'from': web3.eth.accounts[0],
+                                      'to': web3.eth.accounts[1],
+                                      'value': 20})
 
-class TestPlunger:
+    # Until `https://github.com/pipermerriam/eth-testrpc/issues/98` gets resolved, we substitute
+    # `web3.eth.sendTransaction` and do our own nonce comparison to ensure `plunger` uses correct nonces
+    @staticmethod
+    def ensure_transactions(web3: Web3, nonces: list, gas_price: int):
+        def send_transaction_replacement(transaction):
+            if transaction['nonce'] == nonces.pop(0) and transaction['gasPrice'] == gas_price:
+                del transaction['nonce']
+                return send_transaction_original(transaction)
+
+        send_transaction_original = web3.eth.sendTransaction
+        web3.eth.sendTransaction = send_transaction_replacement
+
+    @staticmethod
+    def ensure_transactions_fail(web3: Web3, error_message: str):
+        def send_transaction_replacement(transaction):
+            del transaction['nonce']
+            send_transaction_original(transaction)
+            raise Exception(error_message)
+
+        send_transaction_original = web3.eth.sendTransaction
+        web3.eth.sendTransaction = send_transaction_replacement
+
+    @staticmethod
+    def mock_0_pending_txs_on_eterscan(mock, datadir, account: str):
+        mock.get(f"https://unknown.etherscan.io/txsPending?a={account}", text=datadir.join('etherscan').join('0_pending_txs-list.html').read_text('utf-8'))
+
+    @staticmethod
+    def mock_3_pending_txs_on_eterscan(mock, datadir, account: str):
+        mock.get(f"https://unknown.etherscan.io/txsPending?a={account}", text=datadir.join('etherscan').join('3_pending_txs-list.html').read_text('utf-8'))
+        mock.get(f"https://unknown.etherscan.io/tx/0x124cb0887d0ea364b402fcc1369b7f9bf4d651bc77d2445aefbeab538dd3aab9", text=datadir.join('etherscan').join('3_pending_txs-get1.html').read_text('utf-8'))
+        mock.get(f"https://unknown.etherscan.io/tx/0x72e7a42d3e1b0773f62cfa9ee2bc54ff904a908ac2a668678f9c4880fd046f7a", text=datadir.join('etherscan').join('3_pending_txs-get2.html').read_text('utf-8'))
+        mock.get(f"https://unknown.etherscan.io/tx/0x7bc44a24f93df200a3bd172a5a690bec50c215e7a84fa794bacfb61a211d6559", text=datadir.join('etherscan').join('3_pending_txs-get3.html').read_text('utf-8'))
+
+    @staticmethod
+    def mock_0_pending_txs_in_parity_txqueue(mock, datadir, port_number: int):
+        TestPlunger.mock_3_pending_txs_in_parity_txqueue(mock, datadir, port_number, '0x0')
+
+    @staticmethod
+    def mock_3_pending_txs_in_parity_txqueue(mock, datadir, port_number: int, account: str):
+        response = datadir.join('parity').join('response.json').read_text('utf-8')
+        response = response.replace('OUR_ADDRESS', account.upper())
+        mock.post(f"http://localhost:{port_number}/rpc", text=response)
+
+class TestPlunger(TestPlungerUtils):
     @staticmethod
     def simulate_transactions(web3, number_of_transactions: int):
         for no in range(0, number_of_transactions):
@@ -150,9 +214,8 @@ class TestPlunger:
         # then
         assert "Unknown source(s): 'invalid_one'." in err.getvalue()
 
-    def test_should_detect_0_pending_transactions_on_etherscan(self, port_number, datadir):
+    def test_should_detect_0_pending_transactions_on_etherscan(self, web3, port_number, datadir):
         # given
-        web3 = Web3(TestRPCProvider("127.0.0.1", port_number))
         some_account = web3.eth.accounts[0]
 
         # when
@@ -165,9 +228,8 @@ class TestPlunger:
         # then
         assert out.getvalue() == f"There are no pending transactions on unknown from {some_account}\n"
 
-    def test_should_detect_3_pending_transactions_on_etherscan(self, port_number, datadir):
+    def test_should_detect_3_pending_transactions_on_etherscan(self, web3, port_number, datadir):
         # given
-        web3 = Web3(TestRPCProvider("127.0.0.1", port_number))
         some_account = web3.eth.accounts[0]
 
         # when
@@ -188,9 +250,8 @@ class TestPlunger:
 
 """
 
-    def test_should_detect_0_pending_transactions_in_parity_txqueue(self, port_number, datadir):
+    def test_should_detect_0_pending_transactions_in_parity_txqueue(self, web3, port_number, datadir):
         # given
-        web3 = Web3(TestRPCProvider("127.0.0.1", port_number))
         some_account = web3.eth.accounts[0]
 
         # when
@@ -203,9 +264,8 @@ class TestPlunger:
         # then
         assert out.getvalue() == f"There are no pending transactions on unknown from {some_account}\n"
 
-    def test_should_detect_3_pending_transactions_in_parity_txqueue(self, port_number, datadir):
+    def test_should_detect_3_pending_transactions_in_parity_txqueue(self, web3, port_number, datadir):
         # given
-        web3 = Web3(TestRPCProvider("127.0.0.1", port_number))
         some_account = web3.eth.accounts[0]
 
         # when
@@ -226,9 +286,8 @@ class TestPlunger:
 
 """
 
-    def test_should_ignore_duplicates_when_using_two_sources(self, port_number, datadir):
+    def test_should_ignore_duplicates_when_using_two_sources(self, web3, port_number, datadir):
         # given
-        web3 = Web3(TestRPCProvider("127.0.0.1", port_number))
         some_account = web3.eth.accounts[0]
 
         # when
@@ -251,9 +310,16 @@ class TestPlunger:
 
 """
 
-    def test_should_ignore_pending_transactions_if_their_nonce_is_already_used(self, port_number, datadir):
+    def test_chain(self, web3, port_number):
         # given
-        web3 = Web3(TestRPCProvider("127.0.0.1", port_number))
+        some_account = web3.eth.accounts[0]
+        plunger = Plunger(args(f"--rpc-host 0.0.0.0 --rpc-port {port_number} --source etherscan --list {some_account}"))
+
+        # then
+        assert plunger.chain() == "unknown"
+
+    def test_should_ignore_pending_transactions_if_their_nonce_is_already_used(self, web3, port_number, datadir):
+        # given
         some_account = web3.eth.accounts[0]
 
         # and
@@ -264,7 +330,7 @@ class TestPlunger:
             self.mock_3_pending_txs_on_eterscan(mock, datadir, some_account)
 
             with captured_output() as (out, err):
-                Plunger(args(f"--rpc-port {port_number} --source etherscan --list {some_account}")).main()
+                Plunger(args(f"--rpc-host 0.0.0.0 --rpc-port {port_number} --source etherscan --list {some_account}")).main()
 
         # then
         assert out.getvalue() == f"""There is 1 pending transaction on unknown from {some_account}:
@@ -274,157 +340,3 @@ class TestPlunger:
 0x124cb0887d0ea364b402fcc1369b7f9bf4d651bc77d2445aefbeab538dd3aab9      10
 
 """
-
-    @pytest.mark.timeout(20)
-    def test_wait_should_not_terminate_until_transactions_get_mined(self, port_number, datadir):
-        with captured_output() as (out, err):
-            # given
-            web3 = Web3(TestRPCProvider("127.0.0.1", port_number))
-            some_account = web3.eth.accounts[0]
-
-            # when
-            with requests_mock.Mocker(real_http=True) as mock:
-                self.mock_3_pending_txs_on_eterscan(mock, datadir, some_account)
-
-                threading.Thread(target=lambda: Plunger(args(f"--rpc-port {port_number} --source etherscan --wait {some_account}")).main()).start()
-                time.sleep(7)
-
-            # then
-            assert out.getvalue() == f"""There are 3 pending transactions on unknown from {some_account}:
-
-                              TxHash                                 Nonce
-==========================================================================
-0x7bc44a24f93df200a3bd172a5a690bec50c215e7a84fa794bacfb61a211d6559       8
-0x72e7a42d3e1b0773f62cfa9ee2bc54ff904a908ac2a668678f9c4880fd046f7a       9
-0x124cb0887d0ea364b402fcc1369b7f9bf4d651bc77d2445aefbeab538dd3aab9      10
-
-Waiting for the transactions to get mined...
-"""
-
-            # when
-            self.simulate_transactions(web3, 11)
-
-            # and
-            time.sleep(4)
-
-            # then
-            assert out.getvalue() == f"""There are 3 pending transactions on unknown from {some_account}:
-
-                              TxHash                                 Nonce
-==========================================================================
-0x7bc44a24f93df200a3bd172a5a690bec50c215e7a84fa794bacfb61a211d6559       8
-0x72e7a42d3e1b0773f62cfa9ee2bc54ff904a908ac2a668678f9c4880fd046f7a       9
-0x124cb0887d0ea364b402fcc1369b7f9bf4d651bc77d2445aefbeab538dd3aab9      10
-
-Waiting for the transactions to get mined...
-All pending transactions have been mined.
-"""
-
-    @pytest.mark.timeout(20)
-    def test_should_override_transactions(self, port_number, datadir):
-        with captured_output() as (out, err):
-            # given
-            web3 = Web3(TestRPCProvider("127.0.0.1", port_number))
-            web3.eth.defaultAccount = web3.eth.accounts[0]
-            some_account = web3.eth.accounts[0]
-
-            # and
-            self.simulate_transactions(web3, 9)
-            self.ensure_transactions(web3, [9, 10], 1)
-
-            # when
-            with requests_mock.Mocker(real_http=True) as mock:
-                self.mock_3_pending_txs_on_eterscan(mock, datadir, some_account)
-
-                plunger = Plunger(args(f"--rpc-port {port_number} --source etherscan --override-with-zero-txs {some_account}"))
-                plunger.web3 = web3  # we need to set `web3` as it has `sendTransaction` mocked for nonce comparison
-                plunger.main()
-
-            # then
-            assert re.match(f"""There are 2 pending transactions on unknown from {some_account}:
-
-                              TxHash                                 Nonce
-==========================================================================
-0x72e7a42d3e1b0773f62cfa9ee2bc54ff904a908ac2a668678f9c4880fd046f7a       9
-0x124cb0887d0ea364b402fcc1369b7f9bf4d651bc77d2445aefbeab538dd3aab9      10
-
-Sent replacement transaction with nonce=9, gas_price=1, tx_hash=0x[0-9a-f]{{64}}.
-Sent replacement transaction with nonce=10, gas_price=1, tx_hash=0x[0-9a-f]{{64}}.
-Waiting for the transactions to get mined...
-All pending transactions have been mined.
-""", out.getvalue(), re.MULTILINE)
-
-            # and
-            assert web3.eth.getTransactionCount(some_account) == 11
-
-    @pytest.mark.timeout(20)
-    def test_should_use_custom_gas_price_when_overriding_transactions(self, port_number, datadir):
-        with captured_output() as (out, err):
-            # given
-            web3 = Web3(TestRPCProvider("127.0.0.1", port_number))
-            web3.eth.defaultAccount = web3.eth.accounts[0]
-            some_account = web3.eth.accounts[0]
-            some_gas_price = 150000000
-
-            # and
-            self.simulate_transactions(web3, 10)
-            self.ensure_transactions(web3, [10], some_gas_price)
-
-            # when
-            with requests_mock.Mocker(real_http=True) as mock:
-                self.mock_3_pending_txs_on_eterscan(mock, datadir, some_account)
-
-                plunger = Plunger(args(f"--rpc-port {port_number} --source etherscan --override-with-zero-txs --gas-price {some_gas_price} {some_account}"))
-                plunger.web3 = web3  # we need to set `web3` as it has `sendTransaction` mocked for nonce comparison
-                plunger.main()
-
-            # then
-            assert re.match(f"""There is 1 pending transaction on unknown from {some_account}:
-
-                              TxHash                                 Nonce
-==========================================================================
-0x124cb0887d0ea364b402fcc1369b7f9bf4d651bc77d2445aefbeab538dd3aab9      10
-
-Sent replacement transaction with nonce=10, gas_price={some_gas_price}, tx_hash=0x[0-9a-f]{{64}}.
-Waiting for the transactions to get mined...
-All pending transactions have been mined.
-""", out.getvalue(), re.MULTILINE)
-
-            # and
-            assert web3.eth.getTransactionCount(some_account) == 11
-
-    @pytest.mark.timeout(20)
-    def test_should_handle_transaction_sending_errors(self, port_number, datadir):
-        with captured_output() as (out, err):
-            # given
-            web3 = Web3(TestRPCProvider("127.0.0.1", port_number))
-            web3.eth.defaultAccount = web3.eth.accounts[0]
-            some_account = web3.eth.accounts[0]
-
-            # and
-            self.simulate_transactions(web3, 10)
-            self.ensure_transactions_fail(web3, "Simulated transaction failure")
-
-            # when
-            with requests_mock.Mocker(real_http=True) as mock:
-                self.mock_3_pending_txs_on_eterscan(mock, datadir, some_account)
-
-                plunger = Plunger(args(f"--rpc-port {port_number} --source etherscan --override-with-zero-txs {some_account}"))
-                plunger.web3 = web3  # we need to set `web3` as it has `sendTransaction` mocked for transaction failure simulation
-                plunger.main()
-
-            # then
-            assert out.getvalue() == f"""There is 1 pending transaction on unknown from {some_account}:
-
-                              TxHash                                 Nonce
-==========================================================================
-0x124cb0887d0ea364b402fcc1369b7f9bf4d651bc77d2445aefbeab538dd3aab9      10
-
-Failed to send replacement transaction with nonce=10, gas_price=1.
-   Error: Simulated transaction failure
-Waiting for the transactions to get mined...
-All pending transactions have been mined.
-"""
-
-            # and
-            assert web3.eth.getTransactionCount(some_account) == 11
