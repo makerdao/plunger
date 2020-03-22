@@ -26,8 +26,7 @@ import py
 import pytest
 import requests_mock
 from pytest import fixture
-from eth_tester import EthereumTester
-from web3 import EthereumTesterProvider, HTTPProvider, Web3
+from web3 import HTTPProvider, Web3
 
 from plunger.keys import register_key
 from plunger.plunger import Plunger
