@@ -1,26 +1,27 @@
 language: python
-
 os:
-  - linux
-
+- linux
 python:
-  - 3.6
-
+- 3.6
 cache: pip
-
 before_cache:
-  - rm -f $HOME/.cache/pip/log/debug.log
-
+- rm -f $HOME/.cache/pip/log/debug.log
 install:
-  - pip install virtualenv --upgrade
-  - pip install -r requirements.txt
-  - pip install -r requirements-dev.txt
-
+- pip install virtualenv --upgrade
+- pip install -r requirements.txt
+- pip install -r requirements-dev.txt
 script:
-  - ./test.sh
-
+- "./test.sh"
 after_success:
-  - codecov
-
+- codecov
+deploy:
+  provider: script
+  script: bash docker_push.sh
+  on:
+    branch: master
 notifications:
   email: false
+env:
+  global:
+  - secure: QJU5SIfbGQcXgtPU974xIncvpF4hrwASIvs9oV4ktKiqYkJvn2sFKpuxztVN/etWva7ziWuWNOPjWMK04IhKMLnrq2f26/4WRi0G5nNWhVzV/GLNCEwo9uJUCWvIttfcEDkz61Ftaf5mlA5gHkGgkzPvUjDGBgmE9KA17ga6QIIWmupn3qUJXoaY/yVdHiYQ919Y1matK02GZKIEajSfHRn7iujETFm9xFNloG/mggrQKZxe3fj1V69kVnk2BTNciR8wYLiZmucQnECbWtRe3KFi8UodUFuSQqgPF/FXVesgtrE3cswmVJn3pY7lNCE4o+DSHtEit82tfhHkBDyFShPN97hqib9BtXVweUBiSHuzIuUZ0Kye5vScqYs33aWv65ytqP1nwPPFuey9eWf82sganenlyT3S//sqN4WWLKsjaAuM2/rxtc92Yx5OFztGRncU4b1laZjMJbEYl0rNPudliA+nbICGLgWPRwDn6mvAzrWkosI30wYxXaqQ2nHQSOdHz3n3wqifTJtS3Ros8DXVPeM4rNGyrJBA1EZgn/0JQMlyGpg1mOoFcs1gzs2yZFFe0QanZQYd5ICvnCy55JCeXn+qOyAKO5DTjt+P0iuCfcgBordQOpa5CaR8kPvgTYjFcNEGBIsbqMgmES3A2PcAWupXjLCnktPpoQJodmA=
+  - secure: j2l0ETww+mxClteNb+BweEJ5FgWHTQ9JPlHgRunJgGsgYuFv14PUzAcihOWXaXhl1rt1+Wq1JUVo6xi35TkztQPNqg6nPiLUI9BgpVfslFkOPUP5jBJWJ4ehClXUAyW+S7WFqJnoUA4qGHa2DasnuaZocukQTznGFsl+n4N0xyhGTz3LM9XEy7iOg/Tr4FOCyUVOricLdldvSI3K1Lcd/fcOezP7aV5n/3ioduOgPJKXW2Yy06EjmIArYh193zaeO7RDZucQ32zzFQi4nrIDoW9Qwu8R9klvjK+akczmoAAK+L+13tonSHW1o06AL+2wDQA0+N47mPAvvlQ5qqmaVexWutKLPPfT1jHe7ow1jocvU4kPmLrPglD0wdEG2VBizscKTNV3OmLvxoKM2R3gVDPrSmfRXB2O1yOsnNnJFMHEqjqc82GiZL/s6Pw3A3r5JWztyCS48Y8DJiST8JTAZuBJZR7kcN5jJnnImVPdkSvB+186+nYItf9r5PEChmGUCzsTCBLrGKnNahFF9UFhfSzreC40rgAY3hKFWh3KNbHEUDaLNCzuteLrrsu7ZjinSewww0FiA8gEEettjKgd4BUgqN1oMdAvlgg74ZmLxOaROeY8CKvtlH2FlmHa4HIERdN1HmWfGQDDPjeG0BJOAfx6n7QA8zx9RdZUJpeiIbk=
