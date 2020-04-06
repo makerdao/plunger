@@ -29,7 +29,7 @@ in the Maker RocketChat, linked above.
 
 ## Installation
 
-This project uses *Python 3.6.2*.
+This project uses *Python 3.6.6*.
 
 In order to clone the project and install required third-party packages please execute:
 ```
