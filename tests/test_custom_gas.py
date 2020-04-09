@@ -78,7 +78,6 @@ def args(arguments):
 
 class TestPlunger(TestPlungerUtils):
 
-    @pytest.mark.skip("No stdout is being captured for some reason")
     @pytest.mark.timeout(30)
     def test_should_use_custom_gas_price_when_overriding_transactions(self, web3, port_number, datadir):
         with captured_output() as (out, err):

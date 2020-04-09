@@ -156,7 +156,7 @@ class Plunger:
                                                          'nonce': nonce,
                                                          'value': 0})
 
-                print(f"Sent replacement transaction with nonce={nonce}, gas_price={gas_price}, tx_hash={tx_hash}.")
+                print(f"Sent replacement transaction with nonce={nonce}, gas_price={gas_price}, tx_hash={self.web3.toHex(tx_hash)}.")
             except Exception as e:
                 print(f"Failed to send replacement transaction with nonce={nonce}, gas_price={gas_price}.")
                 print(f"   Error: {e}")
