@@ -90,6 +90,9 @@ class Plunger:
         self.arguments = parser.parse_args(args)
         self.validate_sources()
 
+        # Initialize pending transactions list
+        self.transactions = []
+
         # Initialize web3.py
         if self.arguments.rpc_host.startswith("http"):
             endpoint_uri = f"{self.arguments.rpc_host}:{self.arguments.rpc_port}"
@@ -109,20 +112,20 @@ class Plunger:
 
     def main(self):
         # Get pending transactions
-        transactions = self.get_pending_transactions()
+        self.transactions = self.get_pending_transactions()
 
         # List pending transactions, alternatively say there are none
-        self.list(transactions)
+        self.list(self.transactions)
 
         # If there is at least one pending transaction...
-        if len(transactions) > 0:
+        if len(self.transactions) > 0:
             # ...if called with `--override-with-zero-txs`, all of them to clear
             if self.arguments.override:
-                self.override(transactions)
+                self.override(self.transactions)
 
             # ...if called with either `--override-with-zero-txs` or `--wait`, wait for all of them to clear
             if self.arguments.override or self.arguments.wait:
-                self.wait(transactions)
+                self.wait(self.transactions)
 
     def list(self, transactions):
         # Print the number of pending transactions
@@ -147,7 +150,13 @@ class Plunger:
 
     def override(self, transactions: list):
         # Override all pending transactions with zero-wei transfer transactions
+        last_nonce = self.get_last_nonce()
         for nonce in self.unique_nonces(transactions):
+            ## Check for nonce gaps
+            # If gap exists, set pending transaction nonce to 1 above last sent transaction
+            if nonce > last_nonce + 1:
+                nonce = last_nonce + 1
+
             try:
                 gas_price = self.web3.eth.gasPrice if self.arguments.gas_price == 0 else self.arguments.gas_price
                 tx_hash = self.web3.eth.sendTransaction({'from': self.web3.eth.defaultAccount,
@@ -155,6 +164,15 @@ class Plunger:
                                                          'gasPrice': gas_price,
                                                          'nonce': nonce,
                                                          'value': 0})
+
+                # increment last nonce to account for successful transaction
+                last_nonce += 1
+
+                ## Remove sent transaction from pending transaction queue
+                # As transactions are already sorted and duplicates are removed, can safely pop in order
+                self.transactions.pop(0)
+
+                #TODO: call parity_removeTransaction to explicity remove from txqueue
 
                 print(f"Sent replacement transaction with nonce={nonce}, gas_price={gas_price}, tx_hash={self.web3.toHex(tx_hash)}.")
             except Exception as e:
@@ -166,8 +184,9 @@ class Plunger:
 
         # When `get_last_nonce()` stops being lower than the highest pending nonce,
         # it means all pending transactions or their replacements have been mined.
-        while self.get_last_nonce() < max(transactions, key=lambda tx: tx.nonce).nonce:
-            time.sleep(1)
+        if len(self.transactions) > 0:
+            while self.get_last_nonce() < max(self.transactions, key=lambda tx: tx.nonce).nonce:
+                time.sleep(1)
 
         print(f"All pending transactions have been mined.")
 
