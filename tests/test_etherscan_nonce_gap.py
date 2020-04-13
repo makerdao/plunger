@@ -127,7 +127,3 @@ All pending transactions have been mined.
             assert web3.eth.getTransactionCount(some_account) == 2
 
 
-    # TODO: does override need to be kicked off a second time i.e. retry logic?
-    @pytest.mark.skip("test case not implemented")
-    def test_should_handle_error_in_nonce_gaps(self, web3, port_number, datadir):
-        pass

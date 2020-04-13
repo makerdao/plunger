@@ -176,7 +176,7 @@ export ETH_FROM=0x001.......
 seth send --async --gas-price=500000000 --value=1 -F $ETH_FROM $ETH_FROM
 seth send --async --gas-price=500000000 --value=1 -F $ETH_FROM $ETH_FROM
 
-bin/plunger --rpc-host <YOUR_RPC_HOST> --source parity_txqueue --override-with-zero-txs $ETH_FROM
+bin/plunger --rpc-host <YOUR_RPC_HOST> --source parity_txqueue --override-with-zero-txs $ETH_FROM --eth-key <YOUR_CREDENTIALS>
 ```
 
 The above snippet uses `seth` (see <https://github.com/dapphub/dapptools/tree/master/src/seth>) for sending transactions.

@@ -98,7 +98,7 @@ class Plunger:
             endpoint_uri = f"{self.arguments.rpc_host}:{self.arguments.rpc_port}"
         else:
             endpoint_uri = f"http://{self.arguments.rpc_host}:{self.arguments.rpc_port}"
-        self.web3 = Web3(HTTPProvider(endpoint_uri=endpoint_uri, request_kwargs={'timeout': 60}))
+        self.web3 = Web3(HTTPProvider(endpoint_uri=endpoint_uri))
         self.web3.eth.defaultAccount = self.arguments.address
         if self.arguments.eth_key:
             register_key(self.web3, self.arguments.eth_key)
@@ -171,8 +171,6 @@ class Plunger:
                 ## Remove sent transaction from pending transaction queue
                 # As transactions are already sorted and duplicates are removed, can safely pop in order
                 self.transactions.pop(0)
-
-                #TODO: call parity_removeTransaction to explicity remove from txqueue
 
                 print(f"Sent replacement transaction with nonce={nonce}, gas_price={gas_price}, tx_hash={self.web3.toHex(tx_hash)}.")
             except Exception as e:
