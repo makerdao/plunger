@@ -98,7 +98,7 @@ class Plunger:
             endpoint_uri = f"{self.arguments.rpc_host}:{self.arguments.rpc_port}"
         else:
             endpoint_uri = f"http://{self.arguments.rpc_host}:{self.arguments.rpc_port}"
-        self.web3 = Web3(HTTPProvider(endpoint_uri=endpoint_uri))
+        self.web3 = Web3(HTTPProvider(endpoint_uri=endpoint_uri, request_kwargs={'timeout': 60}))
         self.web3.eth.defaultAccount = self.arguments.address
         if self.arguments.eth_key:
             register_key(self.web3, self.arguments.eth_key)
