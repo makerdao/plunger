@@ -17,7 +17,6 @@
 
 import re
 import sys
-import threading
 import time
 from contextlib import contextmanager
 from io import StringIO
@@ -78,40 +77,42 @@ def args(arguments):
 
 class TestPlunger(TestPlungerUtils):
 
-    @pytest.mark.skip("plunger.main() waits indefinitely")
     @pytest.mark.timeout(20)
-    def test_should_override_transactions(self, web3, port_number, datadir):
-        with captured_output() as (out, err):
+    def test_should_override_parity_txqueue_transactions(self, web3, port_number, datadir):
             # given
             web3.eth.defaultAccount = web3.eth.accounts[0]
             some_account = web3.eth.accounts[0]
-
-            # and
-            self.simulate_transactions(web3, 9)
-            self.ensure_transactions(web3, [9, 10], 1)
+            some_gas_price = 150000000
 
             # when
             with requests_mock.Mocker(real_http=True) as mock:
-                self.mock_3_pending_txs_on_eterscan(mock, datadir, some_account)
+                self.mock_3_pending_txs_in_parity_txqueue(mock, datadir, port_number, some_account)
 
-                plunger = Plunger(args(f"--rpc-host 0.0.0.0 --rpc-port {port_number} --source etherscan --override-with-zero-txs {some_account}"))
-                plunger.web3 = web3  # we need to set `web3` as it has `sendTransaction` mocked for nonce comparison
-                plunger.main()
+                with captured_output() as (out, err):
+                    # and
+                    self.simulate_transactions(web3, 9)
+                    self.ensure_transactions(web3, [9, 10, 11], some_gas_price)
+
+                    plunger = Plunger(args(f"--rpc-host 0.0.0.0 --rpc-port {port_number} --source parity_txqueue --override-with-zero-txs {some_account} --gas-price {some_gas_price}"))
+                    plunger.web3 = web3  # we need to set `web3` as it has `sendTransaction` mocked for nonce comparison
+                    plunger.main()
 
             # then
-            assert re.match(f"""There are 2 pending transactions on unknown from {some_account}:
+            assert re.match(f"""There are 3 pending transactions on unknown from {some_account}:
 
                               TxHash                                 Nonce
 ==========================================================================
 0x72e7a42d3e1b0773f62cfa9ee2bc54ff904a908ac2a668678f9c4880fd046f7a       9
 0x124cb0887d0ea364b402fcc1369b7f9bf4d651bc77d2445aefbeab538dd3aab9      10
+0x53050e62c81fbe440d97d703860096467089bd37b2ad4cc6c699acf217436a64      11
 
-Sent replacement transaction with nonce=9, gas_price=1, tx_hash=0x[0-9a-f]{{64}}.
-Sent replacement transaction with nonce=10, gas_price=1, tx_hash=0x[0-9a-f]{{64}}.
+Sent replacement transaction with nonce=9, gas_price={some_gas_price}, tx_hash=0x[0-9a-f]{{64}}.
+Sent replacement transaction with nonce=10, gas_price={some_gas_price}, tx_hash=0x[0-9a-f]{{64}}.
+Sent replacement transaction with nonce=11, gas_price={some_gas_price}, tx_hash=0x[0-9a-f]{{64}}.
 Waiting for the transactions to get mined...
 All pending transactions have been mined.
 """, out.getvalue(), re.MULTILINE)
 
             # and
-            assert web3.eth.getTransactionCount(some_account) == 11
+            assert web3.eth.getTransactionCount(some_account, "pending") == 12
 

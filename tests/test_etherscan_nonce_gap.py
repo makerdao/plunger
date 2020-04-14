@@ -1,6 +1,6 @@
 # This file is part of Plunger.
 #
-# Copyright (C) 2017 reverendus
+# Copyright (C) 2020 MikeHathaway
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published by
@@ -17,15 +17,15 @@
 
 import re
 import sys
-import threading
 import time
 from contextlib import contextmanager
 from io import StringIO
 
 import py
 import pytest
-import requests_mock
 from pytest import fixture
+import requests_mock
+import requests
 from web3 import HTTPProvider, Web3
 
 from plunger.keys import register_key
@@ -78,38 +78,52 @@ def args(arguments):
 
 class TestPlunger(TestPlungerUtils):
 
-    @pytest.mark.timeout(30)
-    def test_should_use_custom_gas_price_when_overriding_transactions(self, web3, port_number, datadir):
-        with captured_output() as (out, err):
-            # given
-            web3.eth.defaultAccount = web3.eth.accounts[0]
-            some_account = web3.eth.accounts[0]
-            some_gas_price = 150000000
+    # Create a set of transactions in the pool with nonces 8 and 10
+    @staticmethod
+    def mock_noncegapped_txs_on_etherscan(mock, datadir, account: str):
+        mock.get(f"https://unknown.etherscan.io/txsPending?a={account}", text=datadir.join('etherscan').join('nonce_gap_pending_txs_list.html').read_text('utf-8'))
+        mock.get(f"https://unknown.etherscan.io/tx/0x7bc44a24f93df200a3bd172a5a690bec50c215e7a84fa794bacfb61a211d6559", text=datadir.join('etherscan').join('3_pending_txs-get3.html').read_text('utf-8'))
+        mock.get(f"https://unknown.etherscan.io/tx/0x124cb0887d0ea364b402fcc1369b7f9bf4d651bc77d2445aefbeab538dd3aab9", text=datadir.join('etherscan').join('3_pending_txs-get1.html').read_text('utf-8'))
+        # mock.get(f"https://unknown.etherscan.io/tx/0x72e7a42d3e1b0773f62cfa9ee2bc54ff904a908ac2a668678f9c4880fd046f7a", text=datadir.join('etherscan').join('3_pending_txs-get2.html').read_text('utf-8'))
 
-            # and
-            self.simulate_transactions(web3, 10)
-            self.ensure_transactions(web3, [10], some_gas_price)
+    @staticmethod
+    def reset_evm_state(web3, some_account):
+        request = {"method": "evm_reset", "params": [], "id": 1, "jsonrpc": "2.0"}
+        response = requests.post(web3.provider.endpoint_uri + "/rpc", None, request).json()
+        print(web3.eth.getTransactionCount(some_account))
+        return web3.eth.getTransactionCount(some_account)
 
-            # when
-            with requests_mock.Mocker(real_http=True) as mock:
-                self.mock_3_pending_txs_on_eterscan(mock, datadir, some_account)
+    def test_should_handle_etherscan_nonce_gap(self, web3, port_number, datadir):
+        # time.sleep(30)
+        # given
+        some_account = web3.eth.accounts[0]
+        web3.eth.defaultAccount = web3.eth.accounts[0]
+        some_gas_price = 150000000
 
-                plunger = Plunger(args(f"--rpc-host 0.0.0.0 --rpc-port {port_number} --source etherscan --override-with-zero-txs --gas-price {some_gas_price} {some_account}"))
+        # when
+        with requests_mock.Mocker(real_http=True) as mock:
+            self.mock_noncegapped_txs_on_etherscan(mock, datadir, some_account)
+
+            with captured_output() as (out, err):
+                plunger = Plunger(args(f"--rpc-port {port_number} --source etherscan --override-with-zero-txs {some_account} --gas-price {some_gas_price}"))
                 plunger.web3 = web3  # we need to set `web3` as it has `sendTransaction` mocked for nonce comparison
                 plunger.main()
 
             # then
-            assert re.match(f"""There is 1 pending transaction on unknown from {some_account}:
+            assert re.match(f"""There are 2 pending transactions on unknown from {some_account}:
 
                               TxHash                                 Nonce
 ==========================================================================
+0x7bc44a24f93df200a3bd172a5a690bec50c215e7a84fa794bacfb61a211d6559       8
 0x124cb0887d0ea364b402fcc1369b7f9bf4d651bc77d2445aefbeab538dd3aab9      10
 
-Sent replacement transaction with nonce=10, gas_price={some_gas_price}, tx_hash=0x[0-9a-f]{{64}}.
+Sent replacement transaction with nonce=0, gas_price={some_gas_price}, tx_hash=0x[0-9a-f]{{64}}.
+Sent replacement transaction with nonce=1, gas_price={some_gas_price}, tx_hash=0x[0-9a-f]{{64}}.
 Waiting for the transactions to get mined...
 All pending transactions have been mined.
 """, out.getvalue(), re.MULTILINE)
 
             # and
-            assert web3.eth.getTransactionCount(some_account) == 11
+            assert web3.eth.getTransactionCount(some_account) == 2
+
 

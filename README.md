@@ -163,6 +163,8 @@ with the `./test.sh` script, preceded by installing necessary dependencies with
 
 ### Manual testing
 
+Manual testing uses seth. Installation information can be found here: [https://dapp.tools/seth/](https://dapp.tools/seth/)
+
 The following commands can be used to manually test _plunger_. The first two commands
 send 1 Wei transfers with a pretty low gas price of 0.5 GWei, so they won't instantly
 get mined and will very likely get stuck. The third command runs _plunger_ using the same
@@ -174,7 +176,7 @@ export ETH_FROM=0x001.......
 seth send --async --gas-price=500000000 --value=1 -F $ETH_FROM $ETH_FROM
 seth send --async --gas-price=500000000 --value=1 -F $ETH_FROM $ETH_FROM
 
-bin/plunger --source parity_txqueue --override-with-zero-txs $ETH_FROM
+bin/plunger --rpc-host <YOUR_RPC_HOST> --source parity_txqueue --override-with-zero-txs $ETH_FROM --eth-key <YOUR_CREDENTIALS>
 ```
 
 The above snippet uses `seth` (see <https://github.com/dapphub/dapptools/tree/master/src/seth>) for sending transactions.

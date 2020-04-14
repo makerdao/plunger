@@ -24,6 +24,20 @@ TEST_RESULT=$((TEST_RESULT+$?))
 docker-compose down
 docker-compose up -d parity-plunger
 sleep 2
+PYTHONPATH=$PYTHONPATH:. py.test --cov=plunger --cov-report=term --cov-append tests/test_etherscan_nonce_gap.py $@
+TEST_RESULT=$((TEST_RESULT+$?))
+
+# Cleanup
+docker-compose down
+docker-compose up -d parity-plunger
+sleep 2
+PYTHONPATH=$PYTHONPATH:. py.test --cov=plunger --cov-report=term --cov-append tests/test_parity_nonce_gap.py $@
+TEST_RESULT=$((TEST_RESULT+$?))
+
+# Cleanup
+docker-compose down
+docker-compose up -d parity-plunger
+sleep 2
 PYTHONPATH=$PYTHONPATH:. py.test --cov=plunger --cov-report=term --cov-append tests/test_override.py $@
 TEST_RESULT=$((TEST_RESULT+$?))
 
@@ -43,5 +57,4 @@ TEST_RESULT=$((TEST_RESULT+$?))
 
 # Cleanup
 docker-compose down
-
 exit $TEST_RESULT

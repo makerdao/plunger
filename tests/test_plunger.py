@@ -122,7 +122,7 @@ class TestPlungerUtils:
     def mock_3_pending_txs_in_parity_txqueue(mock, datadir, port_number: int, account: str):
         response = datadir.join('parity').join('response.json').read_text('utf-8')
         response = response.replace('OUR_ADDRESS', account.upper())
-        mock.post(f"http://localhost:{port_number}/rpc", text=response)
+        mock.post(f"http://0.0.0.0:{port_number}/rpc", text=response)
 
 class TestPlunger(TestPlungerUtils):
     @staticmethod
