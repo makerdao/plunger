@@ -1,6 +1,6 @@
 # This file is part of Plunger.
 #
-# Copyright (C) 2017 reverendus
+# Copyright (C) 2017-2020 reverendus, EdNoepel
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published by
@@ -16,51 +16,17 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import argparse
+import requests
 import sys
 import time
-
-import requests
 import web3
 from lxml import html
+
+from plunger.etherscan import Etherscan
 from plunger.keys import register_key
+from plunger.model import Transaction
 from texttable import Texttable
 from web3 import Web3, HTTPProvider
-
-
-class Transaction:
-    def __init__(self, tx_hash, nonce):
-        self.tx_hash = tx_hash
-        self.nonce = nonce
-
-    def __eq__(self, other):
-        return self.tx_hash == other.tx_hash and \
-               self.nonce == other.nonce
-
-    def __hash__(self):
-        return hash(self.tx_hash) + hash(self.nonce)
-
-
-class Etherscan:
-    def __init__(self, chain):
-        if chain == "mainnet":
-            self.url = "etherscan.io"
-        elif chain == "kovan":
-            self.url = "kovan.etherscan.io"
-        else:
-            #TODO for unit testing only, let's find a better solution afterwards
-            self.url = "unknown.etherscan.io"
-
-    def list_pending_txs(self, address) -> list:
-        page = requests.get(f"https://{self.url}/txsPending?a={address}")
-        tree = html.fromstring(page.content)
-        tx_ids = tree.xpath('//table[contains(@class,"table")]//td[1]/span[@class="address-tag"]/a/text()')
-        return list(map(self.tx_details, tx_ids))
-
-    def tx_details(self, tx_id) -> Transaction:
-        page = requests.get(f"https://{self.url}/tx/{tx_id}")
-        tree = html.fromstring(page.content)
-        nonce = int(tree.xpath('//span[contains(@title,"The transaction nonce")]/text()')[0].strip())
-        return Transaction(tx_hash=tx_id, nonce=nonce)
 
 
 class Plunger:
@@ -86,6 +52,9 @@ class Plunger:
 
         parser.add_argument("--eth-key", type=str,
                             help="Ethereum private key to use (e.g. 'key_file=aaa.json,pass_file=aaa.pass') for unlocking account")
+        parser.add_argument("--etherscan-key", type=str,
+                            help=f"Etherscan API key to use; required when using {self.SOURCE_ETHERSCAN} as a --source")
+
         # Parse the arguments, validate source
         self.arguments = parser.parse_args(args)
         self.validate_sources()
@@ -224,7 +193,7 @@ class Plunger:
 
     def get_pending_transactions_from_etherscan(self) -> list:
         # Get the list of pending transactions and their details from etherscan.io
-        return Etherscan(self.chain()).list_pending_txs(self.web3.eth.defaultAccount)
+        return Etherscan(self.chain(), self.arguments.etherscan_key).list_pending_txs(self.web3.eth.defaultAccount)
 
     def get_pending_transactions_from_parity(self) -> list:
         # Get the list of pending transactions and their details from Parity transaction pool
