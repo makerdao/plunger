@@ -29,7 +29,7 @@ from web3 import Web3, HTTPProvider
 
 class Plunger:
     SOURCE_PARITY_TXQUEUE = "parity_txqueue"
-    SOURCE_GETH_GETBLOCK = "geth_getblock"
+    SOURCE_JSONRPC_GETBLOCK = "jsonrpc_getblock"
 
     def __init__(self, args: list):
         # Define basic arguments
@@ -39,7 +39,7 @@ class Plunger:
         parser.add_argument("--rpc-port", help="JSON-RPC port (default: `8545')", default=8545, type=int)
         parser.add_argument("--gas-price", help="Gas price (in Wei) for overriding transactions", default=0, type=int)
         parser.add_argument("--source", help=f"Comma-separated list of sources to use for pending transaction discovery"
-                                             f" (available: {self.SOURCE_PARITY_TXQUEUE}, {self.SOURCE_GETH_GETBLOCK})",
+                                             f" (available: {self.SOURCE_PARITY_TXQUEUE}, {self.SOURCE_JSONRPC_GETBLOCK})",
                             type=lambda x: x.split(','), required=True)
 
         # Define mutually exclusive action arguments
@@ -70,7 +70,7 @@ class Plunger:
 
     def validate_sources(self):
         # Check if only correct sources have been listed in the value of the `--source` argument
-        unknown_sources = set(self.arguments.source) - {self.SOURCE_PARITY_TXQUEUE, self.SOURCE_GETH_GETBLOCK}
+        unknown_sources = set(self.arguments.source) - {self.SOURCE_PARITY_TXQUEUE, self.SOURCE_JSONRPC_GETBLOCK}
         if len(unknown_sources) > 0:
             print(f"Unknown source(s): {str(unknown_sources).replace('{', '').replace('}', '')}.", file=sys.stderr)
             exit(-1)
@@ -177,8 +177,8 @@ class Plunger:
         transactions = []
         if self.SOURCE_PARITY_TXQUEUE in self.arguments.source:
             transactions += self.get_pending_transactions_from_parity()
-        if self.SOURCE_GETH_GETBLOCK in self.arguments.source:
-            transactions += self.get_pending_transactions_from_geth()
+        if self.SOURCE_JSONRPC_GETBLOCK in self.arguments.source:
+            transactions += self.get_pending_transactions_from_block()
 
         # Ignore these which have been already mined
         last_nonce = self.get_last_nonce()
@@ -199,12 +199,19 @@ class Plunger:
         items = filter(lambda item: item['blockNumber'] is None, items)
         return list(map(lambda item: Transaction(tx_hash=item['hash'], nonce=int(item['nonce'], 16)), items))
 
-    def get_pending_transactions_from_geth(self) -> list:
+    def get_pending_transactions_from_block(self) -> list:
+        # Get the list of pending transactions from the mempool
+        # First, execute the RPC call and get the response
         request = {"method": "eth_getBlockByNumber", "params": ["pending", True], "id": 1, "jsonrpc": "2.0"}
         response = requests.post(self.web3.provider.endpoint_uri + "/rpc", None, request).json()
+
+        # Then extract pending transactions sent by us from the response and convert them into `Transaction` objects
         items = response['result']['transactions']
         items = filter(lambda item: item['from'].lower() == self.web3.eth.defaultAccount.lower(), items)
-        return list(map(lambda item: Transaction(tx_hash=item['hash'], nonce=int(item['nonce'], 16)), items))
+        result = []
+        for item in list(items):
+            result.append(Transaction(tx_hash=item['hash'], nonce=int(item['nonce'], 16)))
+        return result
 
 
 if __name__ == "__main__":
