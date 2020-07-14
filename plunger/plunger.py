@@ -19,10 +19,8 @@ import argparse
 import requests
 import sys
 import time
-import web3
 from lxml import html
 
-from plunger.etherscan import Etherscan
 from plunger.keys import register_key
 from plunger.model import Transaction
 from texttable import Texttable
@@ -30,7 +28,6 @@ from web3 import Web3, HTTPProvider
 
 
 class Plunger:
-    SOURCE_ETHERSCAN = "etherscan"
     SOURCE_PARITY_TXQUEUE = "parity_txqueue"
     SOURCE_GETH_GETBLOCK = "geth_getblock"
 
@@ -42,7 +39,7 @@ class Plunger:
         parser.add_argument("--rpc-port", help="JSON-RPC port (default: `8545')", default=8545, type=int)
         parser.add_argument("--gas-price", help="Gas price (in Wei) for overriding transactions", default=0, type=int)
         parser.add_argument("--source", help=f"Comma-separated list of sources to use for pending transaction discovery"
-                                             f" (available: {self.SOURCE_ETHERSCAN}, {self.SOURCE_PARITY_TXQUEUE}, {self.SOURCE_GETH_GETBLOCK})",
+                                             f" (available: {self.SOURCE_PARITY_TXQUEUE}, {self.SOURCE_GETH_GETBLOCK})",
                             type=lambda x: x.split(','), required=True)
 
         # Define mutually exclusive action arguments
@@ -53,8 +50,6 @@ class Plunger:
 
         parser.add_argument("--eth-key", type=str,
                             help="Ethereum private key to use (e.g. 'key_file=aaa.json,pass_file=aaa.pass') for unlocking account")
-        parser.add_argument("--etherscan-key", type=str,
-                            help=f"Etherscan API key to use; required when using {self.SOURCE_ETHERSCAN} as a --source")
 
         # Parse the arguments, validate source
         self.arguments = parser.parse_args(args)
@@ -75,7 +70,7 @@ class Plunger:
 
     def validate_sources(self):
         # Check if only correct sources have been listed in the value of the `--source` argument
-        unknown_sources = set(self.arguments.source) - {self.SOURCE_ETHERSCAN, self.SOURCE_PARITY_TXQUEUE, self.SOURCE_GETH_GETBLOCK}
+        unknown_sources = set(self.arguments.source) - {self.SOURCE_PARITY_TXQUEUE, self.SOURCE_GETH_GETBLOCK}
         if len(unknown_sources) > 0:
             print(f"Unknown source(s): {str(unknown_sources).replace('{', '').replace('}', '')}.", file=sys.stderr)
             exit(-1)
@@ -180,8 +175,6 @@ class Plunger:
     def get_pending_transactions(self) -> list:
         # Get the list of pending transactions and their details from specified sources
         transactions = []
-        if self.SOURCE_ETHERSCAN in self.arguments.source:
-            transactions += self.get_pending_transactions_from_etherscan()
         if self.SOURCE_PARITY_TXQUEUE in self.arguments.source:
             transactions += self.get_pending_transactions_from_parity()
         if self.SOURCE_GETH_GETBLOCK in self.arguments.source:
@@ -193,10 +186,6 @@ class Plunger:
 
         # Remove duplicates, sort by nonce and tx_hash
         return sorted(set(transactions), key=lambda tx: (tx.nonce, tx.tx_hash))
-
-    def get_pending_transactions_from_etherscan(self) -> list:
-        # Get the list of pending transactions and their details from etherscan.io
-        return Etherscan(self.chain(), self.arguments.etherscan_key).list_pending_txs(self.web3.eth.defaultAccount)
 
     def get_pending_transactions_from_parity(self) -> list:
         # Get the list of pending transactions and their details from Parity transaction pool
