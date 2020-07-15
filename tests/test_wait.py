@@ -31,66 +31,29 @@ from web3 import HTTPProvider, Web3
 from plunger.keys import register_key
 from plunger.plunger import Plunger
 
-from test_plunger import TestPlungerUtils
+from tests.conftest import args, captured_output
+from tests.test_plunger import TestPlungerUtils
 
 last_port_number = 28545
-
-
-@contextmanager
-def captured_output():
-    new_out, new_err = StringIO(), StringIO()
-    old_out, old_err = sys.stdout, sys.stderr
-    try:
-        sys.stdout, sys.stderr = new_out, new_err
-        yield sys.stdout, sys.stderr
-    finally:
-        sys.stdout, sys.stderr = old_out, old_err
-
-
-@fixture(scope="session")
-def web3():
-    web3 = Web3(HTTPProvider("http://0.0.0.0:8545"))
-    web3.eth.defaultAccount = "0x6c626f45e3b7aE5A3998478753634790fd0E82EE"
-    register_key(web3, "key_file=tests/data/key1.json,pass_file=/dev/null")
-    register_key(web3, "key_file=tests/data/key2.json,pass_file=/dev/null")
-    assert len(web3.eth.accounts) > 1
-    assert isinstance(web3.eth.accounts[0], str)
-    assert isinstance(web3.eth.accounts[1], str)
-    return web3
-
-
-@fixture
-def datadir(request):
-    return py.path.local(request.module.__file__).join("..").join("data")
-
-
-@fixture
-def port_number():
-    # global last_port_number
-    # last_port_number += 1
-    # return last_port_number
-    return 8545
 
 
 def args(arguments):
     return arguments.split()
 
 
-class TestPlunger(TestPlungerUtils):
+class TestPlungerWait(TestPlungerUtils):
 
-    # @pytest.mark.timeout(20)
-    @pytest.mark.skip("check whether TxHashes still make sense with parity vs etherscan mock")
-    def test_wait_should_not_terminate_until_transactions_get_mined(self, web3, port_number, datadir):
+    @pytest.mark.timeout(20)
+    def test_wait_should_not_terminate_until_transactions_get_mined(self, web3, datadir):
         with captured_output() as (out, err):
             # given
-            # web3 = Web3(EthereumTesterProvider(ethereum_tester=EthereumTester()))
             some_account = web3.eth.accounts[0]
 
             # when
             with requests_mock.Mocker(real_http=True) as mock:
-                self.mock_3_pending_txs_on_eterscan(mock, datadir, some_account)
+                self.mock_3_pending_txs_on_jsonrpc(mock, datadir, some_account)
 
-                threading.Thread(target=lambda: Plunger(args(f"--rpc-host 0.0.0.0 --rpc-port {port_number} --source etherscan --wait {some_account}")).main()).start()
+                threading.Thread(target=lambda: Plunger(args(f"--rpc-host 0.0.0.0 --rpc-port 8545 --source jsonrpc_getblock --wait {some_account}")).main()).start()
                 time.sleep(7)
 
             # then
