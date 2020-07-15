@@ -24,8 +24,7 @@ from tests.conftest import args, captured_output
 from tests.test_plunger import TestPlungerUtils
 
 
-
-class TestPlunger(TestPlungerUtils):
+class TestPlungerCustomGas(TestPlungerUtils):
 
     @pytest.mark.timeout(30)
     def test_should_use_custom_gas_price_when_overriding_transactions(self, web3, datadir):
