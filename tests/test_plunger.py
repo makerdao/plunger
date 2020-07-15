@@ -1,6 +1,6 @@
 # This file is part of Plunger.
 #
-# Copyright (C) 2017 reverendus
+# Copyright (C) 2017-2020 reverendus,EdNoepel
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published by
@@ -15,10 +15,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import re
 import sys
-import threading
-import time
 from contextlib import contextmanager
 from io import StringIO
 
@@ -30,8 +27,6 @@ from web3 import HTTPProvider, Web3
 
 from plunger.keys import register_key
 from plunger.plunger import Plunger
-
-last_port_number = 28545
 
 
 @contextmanager
@@ -60,15 +55,6 @@ def web3():
 @fixture
 def datadir(request):
     return py.path.local(request.module.__file__).join("..").join("data")
-
-
-# TODO: eliminate this and hardcode the port everywhere
-@fixture
-def port_number():
-    # global last_port_number
-    # last_port_number += 1
-    # return last_port_number
-    return 8545
 
 
 def args(arguments):
@@ -120,14 +106,14 @@ class TestPlungerUtils:
         mock.post(f"http://0.0.0.0:8545/rpc", text=response)
 
     @staticmethod
-    def mock_0_pending_txs_in_parity_txqueue(mock, datadir, port_number: int):
-        TestPlunger.mock_3_pending_txs_in_parity_txqueue(mock, datadir, port_number, '0x0')
+    def mock_0_pending_txs_in_parity_txqueue(mock, datadir):
+        TestPlunger.mock_3_pending_txs_in_parity_txqueue(mock, datadir, '0x0')
 
     @staticmethod
-    def mock_3_pending_txs_in_parity_txqueue(mock, datadir, port_number: int, account: str):
+    def mock_3_pending_txs_in_parity_txqueue(mock, datadir, account: str):
         response = datadir.join('parity').join('response.json').read_text('utf-8')
         response = response.replace('OUR_ADDRESS', account.upper())
-        mock.post(f"http://0.0.0.0:{port_number}/rpc", text=response)
+        mock.post(f"http://0.0.0.0:8545/rpc", text=response)
 
 class TestPlunger(TestPlungerUtils):
     @staticmethod
@@ -160,14 +146,14 @@ class TestPlunger(TestPlungerUtils):
         web3.eth.sendTransaction = send_transaction_replacement
 
     @staticmethod
-    def mock_0_pending_txs_in_parity_txqueue(mock, datadir, port_number: int):
-        TestPlunger.mock_3_pending_txs_in_parity_txqueue(mock, datadir, port_number, '0x0')
+    def mock_0_pending_txs_in_parity_txqueue(mock, datadir):
+        TestPlunger.mock_3_pending_txs_in_parity_txqueue(mock, datadir, '0x0')
 
     @staticmethod
-    def mock_3_pending_txs_in_parity_txqueue(mock, datadir, port_number: int, account: str):
+    def mock_3_pending_txs_in_parity_txqueue(mock, datadir, account: str):
         response = datadir.join('parity').join('response.json').read_text('utf-8')
         response = response.replace('OUR_ADDRESS', account.upper())
-        mock.post(f"http://localhost:{port_number}/rpc", text=response)
+        mock.post(f"http://localhost:8545/rpc", text=response)
 
     def test_should_print_usage_when_no_arguments(self):
         # when
@@ -208,30 +194,30 @@ class TestPlunger(TestPlungerUtils):
         # then
         assert "Unknown source(s): 'invalid_one'." in err.getvalue()
 
-    def test_should_detect_0_pending_transactions_in_parity_txqueue(self, web3, port_number, datadir):
+    def test_should_detect_0_pending_transactions_in_parity_txqueue(self, web3, datadir):
         # given
         some_account = web3.eth.accounts[0]
 
         # when
         with requests_mock.Mocker(real_http=True) as mock:
-            self.mock_0_pending_txs_in_parity_txqueue(mock, datadir, port_number)
+            self.mock_0_pending_txs_in_parity_txqueue(mock, datadir)
 
             with captured_output() as (out, err):
-                Plunger(args(f"--rpc-port {port_number} --source parity_txqueue --list {some_account}")).main()
+                Plunger(args(f"--rpc-port 8545 --source parity_txqueue --list {some_account}")).main()
 
         # then
         assert out.getvalue() == f"There are no pending transactions on unknown from {some_account}\n"
 
-    def test_should_detect_3_pending_transactions_in_parity_txqueue(self, web3, port_number, datadir):
+    def test_should_detect_3_pending_transactions_in_parity_txqueue(self, web3, datadir):
         # given
         some_account = web3.eth.accounts[0]
 
         # when
         with requests_mock.Mocker(real_http=True) as mock:
-            self.mock_3_pending_txs_in_parity_txqueue(mock, datadir, port_number, some_account)
+            self.mock_3_pending_txs_in_parity_txqueue(mock, datadir, some_account)
 
             with captured_output() as (out, err):
-                Plunger(args(f"--rpc-port {port_number} --source parity_txqueue --list {some_account}")).main()
+                Plunger(args(f"--rpc-port 8545 --source parity_txqueue --list {some_account}")).main()
 
         # then
         assert out.getvalue() == f"""There are 3 pending transactions on unknown from {some_account}:
@@ -244,18 +230,18 @@ class TestPlunger(TestPlungerUtils):
 
 """
 
-    @pytest.mark.skip("pending creation of a new mock")
-    def test_should_ignore_duplicates_when_using_two_sources(self, web3, port_number, datadir):
+    @pytest.mark.skip("cannot mock different request methods on same endpoint, cannot configure different endpoints for same plunger")
+    def test_should_ignore_duplicates_when_using_two_sources(self, web3, datadir):
         # given
         some_account = web3.eth.accounts[0]
 
         # when
         with requests_mock.Mocker(real_http=True) as mock:
-            # TODO: mock 3 txs using jsonrpc_getblock
-            self.mock_3_pending_txs_in_parity_txqueue(mock, datadir, port_number, some_account)
+            self.mock_3_pending_txs_on_jsonrpc(mock, datadir, some_account)
+            self.mock_3_pending_txs_in_parity_txqueue(mock, datadir, some_account)
 
             with captured_output() as (out, err):
-                Plunger(args(f"--rpc-port {port_number} --source etherscan,parity_txqueue --list {some_account}")).main()
+                Plunger(args(f"--rpc-port 8545 --source jsonrpc_getblock,parity_txqueue --list {some_account}")).main()
 
         # then
         assert out.getvalue() == f"""There are 4 pending transactions on unknown from {some_account}:
@@ -269,16 +255,15 @@ class TestPlunger(TestPlungerUtils):
 
 """
 
-    def test_chain(self, web3, port_number):
+    def test_chain(self, web3):
         # given
         some_account = web3.eth.accounts[0]
-        plunger = Plunger(args(f"--rpc-host 0.0.0.0 --rpc-port {port_number} --source jsonrpc_getblock --list {some_account}"))
+        plunger = Plunger(args(f"--rpc-host 0.0.0.0 --rpc-port 8545 --source jsonrpc_getblock --list {some_account}"))
 
         # then
         assert plunger.chain() == "unknown"
 
-    @pytest.mark.skip("meddle with jsonrpc canned data to make this work")
-    def test_should_ignore_pending_transactions_if_their_nonce_is_already_used(self, web3, port_number, datadir):
+    def test_should_ignore_pending_transactions_if_their_nonce_is_already_used(self, web3, datadir):
         # given
         some_account = web3.eth.accounts[0]
 
@@ -287,10 +272,10 @@ class TestPlunger(TestPlungerUtils):
 
         # when
         with requests_mock.Mocker(real_http=True) as mock:
-            self.mock_3_pending_txs_on_eterscan(mock, datadir, some_account)
+            self.mock_3_pending_txs_on_jsonrpc(mock, datadir, some_account)
 
             with captured_output() as (out, err):
-                Plunger(args(f"--rpc-host 0.0.0.0 --rpc-port {port_number} --source etherscan --list {some_account}")).main()
+                Plunger(args(f"--rpc-host 0.0.0.0 --rpc-port 8545 --source jsonrpc_getblock --list {some_account}")).main()
 
         # then
         assert out.getvalue() == f"""There is 1 pending transaction on unknown from {some_account}:
