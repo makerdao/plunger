@@ -39,7 +39,7 @@ def captured_output():
 
 @fixture(scope="session")
 def web3():
-    web3 = Web3(HTTPProvider("http://0.0.0.0:8545"))
+    web3 = Web3(HTTPProvider("http://localhost:8545"))
     web3.eth.defaultAccount = "0x6c626f45e3b7aE5A3998478753634790fd0E82EE"
     register_key(web3, "key_file=tests/data/key1.json,pass_file=/dev/null")
     register_key(web3, "key_file=tests/data/key2.json,pass_file=/dev/null")

@@ -15,11 +15,11 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import re
 import pytest
+import re
 import requests_mock
-from plunger.plunger import Plunger
 
+from plunger.plunger import Plunger
 from tests.conftest import args, captured_output
 from tests.test_plunger import TestPlungerUtils
 
@@ -31,13 +31,13 @@ class TestPlungerNonceGap(TestPlungerUtils):
     def mock_noncegapped_txs_in_parity_txqueue(mock, datadir, account: str):
         response = datadir.join('parity').join('nonce_gap_response.json').read_text('utf-8')
         response = response.replace('OUR_ADDRESS', account.upper())
-        mock.post(f"http://0.0.0.0:8545/rpc", text=response)
+        mock.post(f"http://localhost:8545/rpc", text=response)
 
     @staticmethod
     def mock_noncegapped_first_txs_in_parity_txqueue(mock, datadir, account: str):
         response = datadir.join('parity').join('duplicate_nonce_gap_response.json').read_text('utf-8')
         response = response.replace('OUR_ADDRESS', account.upper())
-        mock.post(f"http://0.0.0.0:8545/rpc", text=response)
+        mock.post(f"http://localhost:8545/rpc", text=response)
 
     def test_should_handle_parity_tx_queue_nonce_gap(self, web3, datadir):
         # time.sleep(30)

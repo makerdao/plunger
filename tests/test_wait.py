@@ -15,30 +15,14 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import re
-import sys
+import pytest
 import threading
 import time
-from contextlib import contextmanager
-from io import StringIO
-
-import py
-import pytest
 import requests_mock
-from pytest import fixture
-from web3 import HTTPProvider, Web3
 
-from plunger.keys import register_key
 from plunger.plunger import Plunger
-
 from tests.conftest import args, captured_output
 from tests.test_plunger import TestPlungerUtils
-
-last_port_number = 28545
-
-
-def args(arguments):
-    return arguments.split()
 
 
 class TestPlungerWait(TestPlungerUtils):
@@ -53,7 +37,7 @@ class TestPlungerWait(TestPlungerUtils):
             with requests_mock.Mocker(real_http=True) as mock:
                 self.mock_3_pending_txs_on_jsonrpc(mock, datadir, some_account)
 
-                threading.Thread(target=lambda: Plunger(args(f"--rpc-host 0.0.0.0 --rpc-port 8545 --source jsonrpc_getblock --wait {some_account}")).main()).start()
+                threading.Thread(target=lambda: Plunger(args(f"--rpc-port 8545 --source jsonrpc_getblock --wait {some_account}")).main()).start()
                 time.sleep(7)
 
             # then
