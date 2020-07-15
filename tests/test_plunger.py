@@ -62,6 +62,7 @@ def datadir(request):
     return py.path.local(request.module.__file__).join("..").join("data")
 
 
+# TODO: eliminate this and hardcode the port everywhere
 @fixture
 def port_number():
     # global last_port_number
@@ -104,15 +105,19 @@ class TestPlungerUtils:
         web3.eth.sendTransaction = send_transaction_replacement
 
     @staticmethod
-    def mock_0_pending_txs_on_eterscan(mock, datadir, account: str):
-        mock.get(f"https://unknown.etherscan.io/txsPending?a={account}", text=datadir.join('etherscan').join('0_pending_txs-list.html').read_text('utf-8'))
+    def mock_0_pending_txs_on_jsonrpc(mock, datadir, account: str):
+        TestPlunger.mock_3_pending_txs_on_jsonrpc(mock, datadir, '0x0')
 
     @staticmethod
-    def mock_3_pending_txs_on_eterscan(mock, datadir, account: str):
-        mock.get(f"https://unknown.etherscan.io/txsPending?a={account}", text=datadir.join('etherscan').join('3_pending_txs-list.html').read_text('utf-8'))
-        mock.get(f"https://unknown.etherscan.io/tx/0x124cb0887d0ea364b402fcc1369b7f9bf4d651bc77d2445aefbeab538dd3aab9", text=datadir.join('etherscan').join('3_pending_txs-get1.html').read_text('utf-8'))
-        mock.get(f"https://unknown.etherscan.io/tx/0x72e7a42d3e1b0773f62cfa9ee2bc54ff904a908ac2a668678f9c4880fd046f7a", text=datadir.join('etherscan').join('3_pending_txs-get2.html').read_text('utf-8'))
-        mock.get(f"https://unknown.etherscan.io/tx/0x7bc44a24f93df200a3bd172a5a690bec50c215e7a84fa794bacfb61a211d6559", text=datadir.join('etherscan').join('3_pending_txs-get3.html').read_text('utf-8'))
+    def mock_3_pending_txs_on_jsonrpc(mock, datadir, account: str):
+        # TODO: Hack my json dump to include these tx hashes
+        # mock.get(f"https://unknown.etherscan.io/txsPending?a={account}", text=datadir.join('etherscan').join('3_pending_txs-list.html').read_text('utf-8'))
+        # mock.get(f"https://unknown.etherscan.io/tx/0x124cb0887d0ea364b402fcc1369b7f9bf4d651bc77d2445aefbeab538dd3aab9", text=datadir.join('etherscan').join('3_pending_txs-get1.html').read_text('utf-8'))
+        # mock.get(f"https://unknown.etherscan.io/tx/0x72e7a42d3e1b0773f62cfa9ee2bc54ff904a908ac2a668678f9c4880fd046f7a", text=datadir.join('etherscan').join('3_pending_txs-get2.html').read_text('utf-8'))
+        # mock.get(f"https://unknown.etherscan.io/tx/0x7bc44a24f93df200a3bd172a5a690bec50c215e7a84fa794bacfb61a211d6559", text=datadir.join('etherscan').join('3_pending_txs-get3.html').read_text('utf-8'))
+        response = datadir.join('jsonrpc').join('response.json').read_text('utf-8')
+        response = response.replace('OUR_ADDRESS', account.upper())
+        mock.post(f"http://0.0.0.0:8545/rpc", text=response)
 
     @staticmethod
     def mock_0_pending_txs_in_parity_txqueue(mock, datadir, port_number: int):
@@ -155,17 +160,6 @@ class TestPlunger(TestPlungerUtils):
         web3.eth.sendTransaction = send_transaction_replacement
 
     @staticmethod
-    def mock_0_pending_txs_on_eterscan(mock, datadir, account: str):
-        mock.get(f"https://unknown.etherscan.io/txsPending?a={account}", text=datadir.join('etherscan').join('0_pending_txs-list.html').read_text('utf-8'))
-
-    @staticmethod
-    def mock_3_pending_txs_on_eterscan(mock, datadir, account: str):
-        mock.get(f"https://unknown.etherscan.io/txsPending?a={account}", text=datadir.join('etherscan').join('3_pending_txs-list.html').read_text('utf-8'))
-        mock.get(f"https://unknown.etherscan.io/tx/0x124cb0887d0ea364b402fcc1369b7f9bf4d651bc77d2445aefbeab538dd3aab9", text=datadir.join('etherscan').join('3_pending_txs-get1.html').read_text('utf-8'))
-        mock.get(f"https://unknown.etherscan.io/tx/0x72e7a42d3e1b0773f62cfa9ee2bc54ff904a908ac2a668678f9c4880fd046f7a", text=datadir.join('etherscan').join('3_pending_txs-get2.html').read_text('utf-8'))
-        mock.get(f"https://unknown.etherscan.io/tx/0x7bc44a24f93df200a3bd172a5a690bec50c215e7a84fa794bacfb61a211d6559", text=datadir.join('etherscan').join('3_pending_txs-get3.html').read_text('utf-8'))
-
-    @staticmethod
     def mock_0_pending_txs_in_parity_txqueue(mock, datadir, port_number: int):
         TestPlunger.mock_3_pending_txs_in_parity_txqueue(mock, datadir, port_number, '0x0')
 
@@ -199,7 +193,7 @@ class TestPlunger(TestPlungerUtils):
         # when
         with captured_output() as (out, err):
             with pytest.raises(SystemExit):
-                Plunger(args("--source etherscan 0x0000011111222223333322222111110000099999")).main()
+                Plunger(args("--source parity_txqueue 0x0000011111222223333322222111110000099999")).main()
 
         # then
         assert "usage: plunger" in err.getvalue()
@@ -209,46 +203,10 @@ class TestPlunger(TestPlungerUtils):
         # when
         with captured_output() as (out, err):
             with pytest.raises(SystemExit):
-                Plunger(args("--source etherscan,invalid_one,parity_txqueue --wait 0x0000011111222223333322222111110000099999")).main()
+                Plunger(args("--source invalid_one,parity_txqueue --wait 0x0000011111222223333322222111110000099999")).main()
 
         # then
         assert "Unknown source(s): 'invalid_one'." in err.getvalue()
-
-    def test_should_detect_0_pending_transactions_on_etherscan(self, web3, port_number, datadir):
-        # given
-        some_account = web3.eth.accounts[0]
-
-        # when
-        with requests_mock.Mocker(real_http=True) as mock:
-            self.mock_0_pending_txs_on_eterscan(mock, datadir, some_account)
-
-            with captured_output() as (out, err):
-                Plunger(args(f"--rpc-port {port_number} --source etherscan --list {some_account}")).main()
-
-        # then
-        assert out.getvalue() == f"There are no pending transactions on unknown from {some_account}\n"
-
-    def test_should_detect_3_pending_transactions_on_etherscan(self, web3, port_number, datadir):
-        # given
-        some_account = web3.eth.accounts[0]
-
-        # when
-        with requests_mock.Mocker(real_http=True) as mock:
-            self.mock_3_pending_txs_on_eterscan(mock, datadir, some_account)
-
-            with captured_output() as (out, err):
-                Plunger(args(f"--rpc-port {port_number} --source etherscan --list {some_account}")).main()
-
-        # then
-        assert out.getvalue() == f"""There are 3 pending transactions on unknown from {some_account}:
-
-                              TxHash                                 Nonce
-==========================================================================
-0x7bc44a24f93df200a3bd172a5a690bec50c215e7a84fa794bacfb61a211d6559       8
-0x72e7a42d3e1b0773f62cfa9ee2bc54ff904a908ac2a668678f9c4880fd046f7a       9
-0x124cb0887d0ea364b402fcc1369b7f9bf4d651bc77d2445aefbeab538dd3aab9      10
-
-"""
 
     def test_should_detect_0_pending_transactions_in_parity_txqueue(self, web3, port_number, datadir):
         # given
@@ -286,13 +244,14 @@ class TestPlunger(TestPlungerUtils):
 
 """
 
+    @pytest.mark.skip("pending creation of a new mock")
     def test_should_ignore_duplicates_when_using_two_sources(self, web3, port_number, datadir):
         # given
         some_account = web3.eth.accounts[0]
 
         # when
         with requests_mock.Mocker(real_http=True) as mock:
-            self.mock_3_pending_txs_on_eterscan(mock, datadir, some_account)
+            # TODO: mock 3 txs using jsonrpc_getblock
             self.mock_3_pending_txs_in_parity_txqueue(mock, datadir, port_number, some_account)
 
             with captured_output() as (out, err):
@@ -313,11 +272,12 @@ class TestPlunger(TestPlungerUtils):
     def test_chain(self, web3, port_number):
         # given
         some_account = web3.eth.accounts[0]
-        plunger = Plunger(args(f"--rpc-host 0.0.0.0 --rpc-port {port_number} --source etherscan --list {some_account}"))
+        plunger = Plunger(args(f"--rpc-host 0.0.0.0 --rpc-port {port_number} --source jsonrpc_getblock --list {some_account}"))
 
         # then
         assert plunger.chain() == "unknown"
 
+    @pytest.mark.skip("meddle with jsonrpc canned data to make this work")
     def test_should_ignore_pending_transactions_if_their_nonce_is_already_used(self, web3, port_number, datadir):
         # given
         some_account = web3.eth.accounts[0]

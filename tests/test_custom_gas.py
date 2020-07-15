@@ -78,7 +78,8 @@ def args(arguments):
 
 class TestPlunger(TestPlungerUtils):
 
-    @pytest.mark.timeout(30)
+    # @pytest.mark.timeout(30)
+    @pytest.mark.skip("check the IDs from simulate_transactions, see if they match mock_3_pending_txs_in_parity_txqueue")
     def test_should_use_custom_gas_price_when_overriding_transactions(self, web3, port_number, datadir):
         with captured_output() as (out, err):
             # given

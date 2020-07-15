@@ -78,7 +78,8 @@ def args(arguments):
 
 class TestPlunger(TestPlungerUtils):
 
-    @pytest.mark.timeout(20)
+    # @pytest.mark.timeout(20)
+    @pytest.mark.skip("check whether TxHashes still make sense with parity vs etherscan mock")
     def test_wait_should_not_terminate_until_transactions_get_mined(self, web3, port_number, datadir):
         with captured_output() as (out, err):
             # given
