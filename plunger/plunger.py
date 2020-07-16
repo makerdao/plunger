@@ -1,6 +1,6 @@
 # This file is part of Plunger.
 #
-# Copyright (C) 2017 reverendus
+# Copyright (C) 2017-2020 reverendus, EdNoepel
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published by
@@ -16,19 +16,19 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import argparse
+import requests
 import sys
 import time
 
-import requests
-import web3
-from lxml import html
 from plunger.keys import register_key
 from texttable import Texttable
 from web3 import Web3, HTTPProvider
 
 
 class Transaction:
-    def __init__(self, tx_hash, nonce):
+    def __init__(self, tx_hash: str, nonce: int):
+        assert isinstance(tx_hash, str)
+        assert isinstance(nonce, int)
         self.tx_hash = tx_hash
         self.nonce = nonce
 
@@ -40,32 +40,9 @@ class Transaction:
         return hash(self.tx_hash) + hash(self.nonce)
 
 
-class Etherscan:
-    def __init__(self, chain):
-        if chain == "mainnet":
-            self.url = "etherscan.io"
-        elif chain == "kovan":
-            self.url = "kovan.etherscan.io"
-        else:
-            #TODO for unit testing only, let's find a better solution afterwards
-            self.url = "unknown.etherscan.io"
-
-    def list_pending_txs(self, address) -> list:
-        page = requests.get(f"https://{self.url}/txsPending?a={address}")
-        tree = html.fromstring(page.content)
-        tx_ids = tree.xpath('//table[contains(@class,"table")]//td[1]/span[@class="address-tag"]/a/text()')
-        return list(map(self.tx_details, tx_ids))
-
-    def tx_details(self, tx_id) -> Transaction:
-        page = requests.get(f"https://{self.url}/tx/{tx_id}")
-        tree = html.fromstring(page.content)
-        nonce = int(tree.xpath('//span[contains(@title,"The transaction nonce")]/text()')[0].strip())
-        return Transaction(tx_hash=tx_id, nonce=nonce)
-
-
 class Plunger:
-    SOURCE_ETHERSCAN = "etherscan"
     SOURCE_PARITY_TXQUEUE = "parity_txqueue"
+    SOURCE_JSONRPC_GETBLOCK = "jsonrpc_getblock"
 
     def __init__(self, args: list):
         # Define basic arguments
@@ -75,7 +52,7 @@ class Plunger:
         parser.add_argument("--rpc-port", help="JSON-RPC port (default: `8545')", default=8545, type=int)
         parser.add_argument("--gas-price", help="Gas price (in Wei) for overriding transactions", default=0, type=int)
         parser.add_argument("--source", help=f"Comma-separated list of sources to use for pending transaction discovery"
-                                             f" (available: {self.SOURCE_ETHERSCAN}, {self.SOURCE_PARITY_TXQUEUE})",
+                                             f" (available: {self.SOURCE_PARITY_TXQUEUE}, {self.SOURCE_JSONRPC_GETBLOCK})",
                             type=lambda x: x.split(','), required=True)
 
         # Define mutually exclusive action arguments
@@ -86,6 +63,7 @@ class Plunger:
 
         parser.add_argument("--eth-key", type=str,
                             help="Ethereum private key to use (e.g. 'key_file=aaa.json,pass_file=aaa.pass') for unlocking account")
+
         # Parse the arguments, validate source
         self.arguments = parser.parse_args(args)
         self.validate_sources()
@@ -105,7 +83,7 @@ class Plunger:
 
     def validate_sources(self):
         # Check if only correct sources have been listed in the value of the `--source` argument
-        unknown_sources = set(self.arguments.source) - {self.SOURCE_ETHERSCAN, self.SOURCE_PARITY_TXQUEUE}
+        unknown_sources = set(self.arguments.source) - {self.SOURCE_PARITY_TXQUEUE, self.SOURCE_JSONRPC_GETBLOCK}
         if len(unknown_sources) > 0:
             print(f"Unknown source(s): {str(unknown_sources).replace('{', '').replace('}', '')}.", file=sys.stderr)
             exit(-1)
@@ -210,10 +188,10 @@ class Plunger:
     def get_pending_transactions(self) -> list:
         # Get the list of pending transactions and their details from specified sources
         transactions = []
-        if self.SOURCE_ETHERSCAN in self.arguments.source:
-            transactions += self.get_pending_transactions_from_etherscan()
         if self.SOURCE_PARITY_TXQUEUE in self.arguments.source:
             transactions += self.get_pending_transactions_from_parity()
+        if self.SOURCE_JSONRPC_GETBLOCK in self.arguments.source:
+            transactions += self.get_pending_transactions_from_block()
 
         # Ignore these which have been already mined
         last_nonce = self.get_last_nonce()
@@ -221,10 +199,6 @@ class Plunger:
 
         # Remove duplicates, sort by nonce and tx_hash
         return sorted(set(transactions), key=lambda tx: (tx.nonce, tx.tx_hash))
-
-    def get_pending_transactions_from_etherscan(self) -> list:
-        # Get the list of pending transactions and their details from etherscan.io
-        return Etherscan(self.chain()).list_pending_txs(self.web3.eth.defaultAccount)
 
     def get_pending_transactions_from_parity(self) -> list:
         # Get the list of pending transactions and their details from Parity transaction pool
@@ -237,6 +211,20 @@ class Plunger:
         items = filter(lambda item: item['from'].lower() == self.web3.eth.defaultAccount.lower(), items)
         items = filter(lambda item: item['blockNumber'] is None, items)
         return list(map(lambda item: Transaction(tx_hash=item['hash'], nonce=int(item['nonce'], 16)), items))
+
+    def get_pending_transactions_from_block(self) -> list:
+        # Get the list of pending transactions from the mempool
+        # First, execute the RPC call and get the response
+        request = {"method": "eth_getBlockByNumber", "params": ["pending", True], "id": 1, "jsonrpc": "2.0"}
+        response = requests.post(self.web3.provider.endpoint_uri + "/rpc", None, request).json()
+
+        # Then extract pending transactions sent by us from the response and convert them into `Transaction` objects
+        items = response['result']['transactions']
+        items = filter(lambda item: item['from'].lower() == self.web3.eth.defaultAccount.lower(), items)
+        result = []
+        for item in list(items):
+            result.append(Transaction(tx_hash=item['hash'], nonce=int(item['nonce'], 16)))
+        return result
 
 
 if __name__ == "__main__":

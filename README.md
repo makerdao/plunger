@@ -70,7 +70,7 @@ optional arguments:
   --gas-price GAS_PRICE
                         Gas price (in Wei) for overriding transactions
   --source SOURCE       Comma-separated list of sources to use for pending
-                        transaction discovery (available: etherscan,
+                        transaction discovery (available: jsonrpc_getblock, 
                         parity_txqueue)
   --list                List pending transactions
   --wait                Wait for the pending transactions to clear
@@ -87,7 +87,7 @@ If you want _plunger_ to only list pending transactions originating from the spe
 call it with the `--list` argument:
 
 ```bash
-bin/plunger --source etherscan,parity_txqueue --list 0x0101010101010101010101010101010101010101
+bin/plunger --source parity_txqueue,jsonrpc_getblock --list 0x0101010101010101010101010101010101010101
 ```
 
 ### Waiting for pending transactions to clear
@@ -96,7 +96,7 @@ If you want _plunger_ to just wait for the pending transactions from the specifi
 to get processed by the network (i.e. to get mined), run it with the `--wait` argument:
 
 ```bash
-bin/plunger --source etherscan,parity_txqueue --wait 0x0101010101010101010101010101010101010101
+bin/plunger --source parity_txqueue,jsonrpc_getblock --wait 0x0101010101010101010101010101010101010101
 ```
 
 This is a completely passive mode i.e. no Ethereum transactions get sent by _plunger_
@@ -112,7 +112,7 @@ If you want _plunger_ to try to override all pending transactions with a zero We
 but with gas cost higher than the original, run it with the `--override-with-zero-txs` argument:
 
 ```bash
-bin/plunger --source etherscan,parity_txqueue --override-with-zero-txs 0x0101010101010101010101010101010101010101
+bin/plunger --source parity_txqueue,jsonrpc_getblock --override-with-zero-txs 0x0101010101010101010101010101010101010101
 ```
 
 _Plunger_ will send replacement transactions immediately, then it will start monitoring the
@@ -135,7 +135,7 @@ Gas price for overriding transactions can be specified using the `--gas-price` a
 If this argument is not present, _plunger_ will use the default gas price suggested by
 the Ethereum node it is connected to.
 
-Bear in mind that the new gas price has to be at least 10% higher than the original one,
+Bear in mind that the new gas price has to be at least 12.5% higher than the original one,
 otherwise Parity will not even accept such a replacement transaction. If it happens, _plunger_
 will display an error message but will still wait for the pending transactions to get mined
 as it is still possible the original one will go through. 
@@ -143,14 +143,12 @@ as it is still possible the original one will go through.
 ### Pending transactions discovery
 
 The `--source` argument has to be used to specify how _plunger_ should discover pending transactions.
-Currently it can either query _etherscan.io_ (`--source etherscan`) or look for them in the Parity
-transaction queue (`--source parity_txqueue`). Bear in mind that it is a custom _Parity_ RPC endpoint
-and so this latter method will not work with _geth_.
+Two methods are currently supported:
+  - **JSON-RPC API** (`--source jsonrpc_getblock`) has been tested on both _Parity_ and _geth_.
+  - **Parity transaction queue** (`--source parity_txqueue`) is a custom _Parity_ RPC endpoint
+  which will not work with _geth_.
 
-Both discovery methods can be used at the same time (`--source etherscan,parity_txqueue`).
-
-The _etherscan.io_ integration works by scraping their website as the API exposed by them
-does not give access to pending transactions.
+Both discovery methods can be used at the same time (`--source parity_txqueue,jsonrpc_getblock`).
 
 
 ## Testing
