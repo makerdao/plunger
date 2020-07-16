@@ -19,12 +19,25 @@ import argparse
 import requests
 import sys
 import time
-from lxml import html
 
 from plunger.keys import register_key
-from plunger.model import Transaction
 from texttable import Texttable
 from web3 import Web3, HTTPProvider
+
+
+class Transaction:
+    def __init__(self, tx_hash: str, nonce: int):
+        assert isinstance(tx_hash, str)
+        assert isinstance(nonce, int)
+        self.tx_hash = tx_hash
+        self.nonce = nonce
+
+    def __eq__(self, other):
+        return self.tx_hash == other.tx_hash and \
+               self.nonce == other.nonce
+
+    def __hash__(self):
+        return hash(self.tx_hash) + hash(self.nonce)
 
 
 class Plunger:
