@@ -200,7 +200,8 @@ class TestPlunger(TestPlungerUtils):
                 Plunger(args(f"--rpc-port 8545 --source jsonrpc_getblock --list {some_account}")).main()
 
         # then
-        assert out.getvalue() == f"""There is 1 pending transaction on unknown from {some_account}:
+        assert out.getvalue() == f"""WARNING: jsonrpc_getblock requires Parity/OpenEthereum in mining configuration
+There is 1 pending transaction on unknown from {some_account}:
 
                               TxHash                                 Nonce
 ==========================================================================

@@ -48,7 +48,8 @@ class TestPlungerCustomGas(TestPlungerUtils):
 
             # then
             print(out.getvalue())
-            assert re.match(f"""There is 1 pending transaction on unknown from {some_account}:
+            assert re.match(f"""WARNING: jsonrpc_getblock requires Parity/OpenEthereum in mining configuration
+There is 1 pending transaction on unknown from {some_account}:
 
                               TxHash                                 Nonce
 ==========================================================================

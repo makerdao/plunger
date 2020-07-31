@@ -66,7 +66,6 @@ class Plunger:
 
         # Parse the arguments, validate source
         self.arguments = parser.parse_args(args)
-        self.validate_sources()
 
         # Initialize pending transactions list
         self.transactions = []
@@ -81,12 +80,18 @@ class Plunger:
         if self.arguments.eth_key:
             register_key(self.web3, self.arguments.eth_key)
 
-    def validate_sources(self):
+        self.validate_sources(self.web3)
+
+    def validate_sources(self, web3):
         # Check if only correct sources have been listed in the value of the `--source` argument
         unknown_sources = set(self.arguments.source) - {self.SOURCE_PARITY_TXQUEUE, self.SOURCE_JSONRPC_GETBLOCK}
         if len(unknown_sources) > 0:
             print(f"Unknown source(s): {str(unknown_sources).replace('{', '').replace('}', '')}.", file=sys.stderr)
             exit(-1)
+        is_parity = 'parity' in web3.clientVersion.lower() or 'openethereum' in web3.clientVersion.lower()
+        # TODO: warn using parity_txquee if it's not parity
+        if self.SOURCE_JSONRPC_GETBLOCK in self.arguments.source and is_parity:
+            print(f"WARNING: {self.SOURCE_JSONRPC_GETBLOCK} requires Parity/OpenEthereum in mining configuration")
 
     def main(self):
         # Get pending transactions
