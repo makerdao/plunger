@@ -42,8 +42,7 @@ class TestPlungerWait(TestPlungerUtils):
                 time.sleep(7)
 
             # then
-            assert out.getvalue() == f"""WARNING: jsonrpc_getblock requires Parity/OpenEthereum in mining configuration
-There are 3 pending transactions on unknown from {some_account}:
+            assert out.getvalue() == f"""There are 3 pending transactions on unknown from {some_account}:
 
                               TxHash                                 Nonce
 ==========================================================================
@@ -61,8 +60,7 @@ Waiting for the transactions to get mined...
             time.sleep(4)
 
             # then
-            assert out.getvalue() == f"""WARNING: jsonrpc_getblock requires Parity/OpenEthereum in mining configuration
-There are 3 pending transactions on unknown from {some_account}:
+            assert out.getvalue() == f"""There are 3 pending transactions on unknown from {some_account}:
 
                               TxHash                                 Nonce
 ==========================================================================

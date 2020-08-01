@@ -89,9 +89,10 @@ class Plunger:
             print(f"Unknown source(s): {str(unknown_sources).replace('{', '').replace('}', '')}.", file=sys.stderr)
             exit(-1)
         is_parity = 'parity' in web3.clientVersion.lower() or 'openethereum' in web3.clientVersion.lower()
-        # TODO: warn using parity_txquee if it's not parity
-        if self.SOURCE_JSONRPC_GETBLOCK in self.arguments.source and is_parity:
-            print(f"WARNING: {self.SOURCE_JSONRPC_GETBLOCK} requires Parity/OpenEthereum in mining configuration")
+        if self.SOURCE_PARITY_TXQUEUE in self.arguments.source and not is_parity:
+            print(f"WARNING: {self.SOURCE_PARITY_TXQUEUE} requires Parity/OpenEthereum")
+        if self.SOURCE_JSONRPC_GETBLOCK in self.arguments.source and self.web3.eth.chainId == 42 and is_parity:
+            print(f"WARNING: {self.SOURCE_JSONRPC_GETBLOCK} requires Parity/OpenEthereum in mining configuration on Kovan")
 
     def main(self):
         # Get pending transactions
