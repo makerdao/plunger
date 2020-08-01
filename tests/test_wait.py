@@ -27,7 +27,6 @@ from tests.test_plunger import TestPlungerUtils
 
 class TestPlungerWait(TestPlungerUtils):
 
-    # @pytest.mark.skip("no stdout from process for some reason")
     @pytest.mark.timeout(20)
     def test_wait_should_not_terminate_until_transactions_get_mined(self, web3, datadir):
         with captured_output() as (out, err):
