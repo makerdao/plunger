@@ -160,15 +160,19 @@ Both discovery methods can be used at the same time (`--source parity_txqueue,js
 
 4. Populate required env vars in `./.env` file or `export` these in your shell
 
-5. Then to list stuck transactions:
+5. Create stuck transaction with `seth`. See more below on `seth`
+
+    `seth send --async --gas-price=500000000 --value=1 -F $ETH_FROM $ETH_FROM`
+
+6. Then to list stuck transactions:
 
     `docker-compose run plunger-list`
 
-6. To force stuck transaction with default gas amount:
+7. To force stuck transaction with default gas amount:
 
     `docker-compose run plunger-force`
 
-6. To force stuck transaction specifying gas amount to be 20GWei:
+8. To force stuck transaction specifying gas amount to be 20GWei:
 
     `docker-compose run -e GAS_PRICE=20000000000 plunger-force`
 
