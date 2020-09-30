@@ -150,6 +150,24 @@ Two methods are currently supported:
 
 Both discovery methods can be used at the same time (`--source parity_txqueue,jsonrpc_getblock`).
 
+### Running with `docker-compose`
+
+1. Create `./secrets` dir and place your `keystore.json` and `password.txt` files in it
+
+2. Populate required env vars in `./.env` file or `export` these in your shell
+
+3. Then to list stuck transactions:
+
+    `docker-compose run plunger-list`
+
+4. To force stuck transaction with default gas amount:
+
+    `docker-compose run plunger-force`
+
+5. To force stuck transaction specifying gas amount to be 20GWei:
+
+    `docker-compose run -e GAS_PRICE=20000000000 plunger-force`
+
 
 ## Testing
 
