@@ -152,27 +152,25 @@ Both discovery methods can be used at the same time (`--source parity_txqueue,js
 
 ### Running with `docker-compose`
 
-1. Create Kovan account with Metamask. This address will be `$ETH_FROM`
+1. Create Kovan account. This can be done with Metamask. This address will be `$ETH_FROM`
 
-2. Create `keystore.json` and `password.txt` with MyCrypto
+1. From this account create `keystore.json` and place it in a directory, for example `./secrets`
 
-3. Create `./secrets` dir and place your `keystore.json` and `password.txt` files in it
+1. Populate required env vars in `./.env` file or `export` these in your shell
 
-4. Populate required env vars in `./.env` file or `export` these in your shell
-
-5. Create stuck transaction with `seth`. See more below on `seth`
+1. Create a transaction with `seth` with low gas that will get stuck. See more below on `seth`
 
     `seth send --async --gas-price=500000000 --value=1 -F $ETH_FROM $ETH_FROM`
 
-6. Then to list stuck transactions:
+1. Then to list stuck transactions:
 
     `docker-compose run plunger-list`
 
-7. To force stuck transaction with default gas amount:
+1. To force stuck transaction with default gas amount. Provide password to `keystore.json` when prompted:
 
     `docker-compose run plunger-force`
 
-8. To force stuck transaction specifying gas amount to be 20GWei:
+1. To force stuck transaction specifying gas amount to be 20GWei:
 
     `docker-compose run -e GAS_PRICE=20000000000 plunger-force`
 
