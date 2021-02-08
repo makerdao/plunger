@@ -9,32 +9,32 @@ docker-compose down
 # Start parity and wait to initialize
 docker-compose up -d parity-plunger; sleep 2
 
-PYTHONPATH=$PYTHONPATH:. py.test --cov=plunger --cov-report=term --cov-append tests/test_plunger.py $@
+PYTHONPATH=$PYTHONPATH:./lib/pygasprice-client py.test --cov=plunger --cov-report=term --cov-append tests/test_plunger.py $@
 TEST_RESULT=$?
 docker-compose down
 
 docker-compose up -d parity-plunger; sleep 2
-PYTHONPATH=$PYTHONPATH:. py.test --cov=plunger --cov-report=term --cov-append tests/test_wait.py $@
+PYTHONPATH=$PYTHONPATH:./lib/pygasprice-client py.test --cov=plunger --cov-report=term --cov-append tests/test_wait.py $@
 TEST_RESULT=$((TEST_RESULT+$?))
 docker-compose down
 
 docker-compose up -d parity-plunger; sleep 2
-PYTHONPATH=$PYTHONPATH:. py.test --cov=plunger --cov-report=term --cov-append tests/test_parity_nonce_gap.py $@
+PYTHONPATH=$PYTHONPATH:./lib/pygasprice-client py.test --cov=plunger --cov-report=term --cov-append tests/test_parity_nonce_gap.py $@
 TEST_RESULT=$((TEST_RESULT+$?))
 docker-compose down
 
 docker-compose up -d parity-plunger; sleep 2
-PYTHONPATH=$PYTHONPATH:. py.test --cov=plunger --cov-report=term --cov-append tests/test_override.py $@
+PYTHONPATH=$PYTHONPATH:./lib/pygasprice-client py.test --cov=plunger --cov-report=term --cov-append tests/test_override.py $@
 TEST_RESULT=$((TEST_RESULT+$?))
 docker-compose down
 
 docker-compose up -d parity-plunger; sleep 2
-PYTHONPATH=$PYTHONPATH:. py.test --cov=plunger --cov-report=term --cov-append tests/test_custom_gas.py $@
+PYTHONPATH=$PYTHONPATH:./lib/pygasprice-client py.test --cov=plunger --cov-report=term --cov-append tests/test_custom_gas.py $@
 TEST_RESULT=$((TEST_RESULT+$?))
 docker-compose down
 
 docker-compose up -d parity-plunger; sleep 2
-PYTHONPATH=$PYTHONPATH:. py.test --cov=plunger --cov-report=term --cov-append tests/test_tx_err.py $@
+PYTHONPATH=$PYTHONPATH:./lib/pygasprice-client py.test --cov=plunger --cov-report=term --cov-append tests/test_tx_err.py $@
 TEST_RESULT=$((TEST_RESULT+$?))
 docker-compose down
 

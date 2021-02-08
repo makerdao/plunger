@@ -19,10 +19,12 @@ import argparse
 import requests
 import sys
 import time
+import json
 
 from plunger.keys import register_key
 from texttable import Texttable
 from web3 import Web3, HTTPProvider
+from pygasprice_client.aggregator import Aggregator
 
 
 class Transaction:
@@ -54,12 +56,19 @@ class Plunger:
         parser.add_argument("--source", help=f"Comma-separated list of sources to use for pending transaction discovery"
                                              f" (available: {self.SOURCE_PARITY_TXQUEUE}, {self.SOURCE_JSONRPC_GETBLOCK})",
                             type=lambda x: x.split(','), required=True)
+        parser.add_argument("-j", '--json', help="Generate result as JSON", dest='json', action='store_true')
 
         # Define mutually exclusive action arguments
         action = parser.add_mutually_exclusive_group(required=True)
         action.add_argument('--list', help="List pending transactions", dest='list', action='store_true')
         action.add_argument('--wait', help="Wait for the pending transactions to clear", dest='wait', action='store_true')
         action.add_argument('--override-with-zero-txs', help="Override the pending transactions with zero-value txs", dest='override', action='store_true')
+
+        # Define arguments for smart gas client
+        parser.add_argument("-s", '--smart-gas', help="Use smart gas strategy to plunge", dest='smart_gas', action='store_true')
+        parser.add_argument("--ethgasstation-api-key", type=str, default=None, help="ethgasstation API key")
+        parser.add_argument("--etherscan-api-key", type=str, default=None, help="etherscan API key")
+        parser.add_argument("--poanetwork-url", type=str, default=None, help="Alternative POANetwork URL")
 
         parser.add_argument("--eth-key", type=str,
                             help="Ethereum private key to use (e.g. 'key_file=aaa.json,pass_file=aaa.pass') for unlocking account")
@@ -79,6 +88,13 @@ class Plunger:
         self.web3.eth.defaultAccount = self.arguments.address
         if self.arguments.eth_key:
             register_key(self.web3, self.arguments.eth_key)
+
+        if self.arguments.smart_gas:
+            self.gas_client = Aggregator(refresh_interval=60, expiry=600,
+                                         ethgasstation_api_key=self.arguments.ethgasstation_api_key,
+                                         poa_network_alt_url=self.arguments.poanetwork_url,
+                                         etherscan_api_key=self.arguments.etherscan_api_key,
+                                         gasnow_app_name="makerdao/plunger")
 
         self.validate_sources(self.web3)
 
@@ -112,6 +128,11 @@ class Plunger:
                 self.wait(self.transactions)
 
     def list(self, transactions):
+
+        if self.arguments.json:
+            print(json.dumps(list(map(lambda tx: {'hash': tx.tx_hash, 'nonce': tx.nonce}, transactions))))
+            return
+
         # Print the number of pending transactions
         if len(transactions) == 0:
             print(f"There are no pending transactions on {self.chain()} from {self.web3.eth.defaultAccount}")
@@ -142,7 +163,10 @@ class Plunger:
                 nonce = last_nonce + 1
 
             try:
-                gas_price = self.web3.eth.gasPrice if self.arguments.gas_price == 0 else self.arguments.gas_price
+                if self.arguments.smart_gas:
+                    gas_price = int(self.gas_client.fastest_price() * 1.1)
+                else:
+                    gas_price = self.web3.eth.gasPrice if self.arguments.gas_price == 0 else self.arguments.gas_price
                 tx_hash = self.web3.eth.sendTransaction({'from': self.web3.eth.defaultAccount,
                                                          'to': self.web3.eth.defaultAccount,
                                                          'gasPrice': gas_price,

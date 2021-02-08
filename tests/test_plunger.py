@@ -17,6 +17,7 @@
 
 import pytest
 import requests_mock
+import json
 from web3 import Web3
 
 from plunger.plunger import Plunger
@@ -127,8 +128,12 @@ class TestPlunger(TestPlungerUtils):
             with captured_output() as (out, err):
                 Plunger(args(f"--rpc-port 8545 --source parity_txqueue --list {some_account}")).main()
 
+            with captured_output() as (json_out, err):
+                Plunger(args(f"--rpc-port 8545 --source parity_txqueue --json --list {some_account}")).main()
+
         # then
         assert out.getvalue() == f"There are no pending transactions on unknown from {some_account}\n"
+        assert json.loads(json_out.getvalue()) == []
 
     def test_should_detect_3_pending_transactions_in_parity_txqueue(self, web3, datadir):
         # given
@@ -141,6 +146,9 @@ class TestPlunger(TestPlungerUtils):
             with captured_output() as (out, err):
                 Plunger(args(f"--rpc-port 8545 --source parity_txqueue --list {some_account}")).main()
 
+            with captured_output() as (json_out, err):
+                Plunger(args(f"--rpc-port 8545 --source parity_txqueue --json --list {some_account}")).main()
+
         # then
         assert out.getvalue() == f"""There are 3 pending transactions on unknown from {some_account}:
 
@@ -151,6 +159,20 @@ class TestPlunger(TestPlungerUtils):
 0x53050e62c81fbe440d97d703860096467089bd37b2ad4cc6c699acf217436a64      11
 
 """
+        assert json.loads(json_out.getvalue()) == [
+            {
+                'hash': '0x72e7a42d3e1b0773f62cfa9ee2bc54ff904a908ac2a668678f9c4880fd046f7a',
+                'nonce': 9
+            },
+            {
+                'hash': '0x124cb0887d0ea364b402fcc1369b7f9bf4d651bc77d2445aefbeab538dd3aab9',
+                'nonce': 10
+            },
+            {
+                'hash': '0x53050e62c81fbe440d97d703860096467089bd37b2ad4cc6c699acf217436a64',
+                'nonce': 11
+            }
+        ]
 
     @pytest.mark.skip("cannot mock different request methods on same endpoint, cannot configure different endpoints for same plunger")
     def test_should_ignore_duplicates_when_using_two_sources(self, web3, datadir):
@@ -165,6 +187,9 @@ class TestPlunger(TestPlungerUtils):
             with captured_output() as (out, err):
                 Plunger(args(f"--rpc-port 8545 --source jsonrpc_getblock,parity_txqueue --list {some_account}")).main()
 
+            with captured_output() as (json_out, err):
+                Plunger(args(f"--rpc-port 8545 --source jsonrpc_getblock,parity_txqueue --json --list {some_account}")).main()
+
         # then
         assert out.getvalue() == f"""There are 4 pending transactions on unknown from {some_account}:
 
@@ -176,6 +201,24 @@ class TestPlunger(TestPlungerUtils):
 0x53050e62c81fbe440d97d703860096467089bd37b2ad4cc6c699acf217436a64      11
 
 """
+        assert json.loads(json_out.getvalue()) == [
+            {
+                'hash': '0x7bc44a24f93df200a3bd172a5a690bec50c215e7a84fa794bacfb61a211d6559',
+                'nonce': 8
+            },
+            {
+                'hash': '0x72e7a42d3e1b0773f62cfa9ee2bc54ff904a908ac2a668678f9c4880fd046f7a',
+                'nonce': 9
+            },
+            {
+                'hash': '0x124cb0887d0ea364b402fcc1369b7f9bf4d651bc77d2445aefbeab538dd3aab9',
+                'nonce': 10
+            },
+            {
+                'hash': '0x53050e62c81fbe440d97d703860096467089bd37b2ad4cc6c699acf217436a64',
+                'nonce': 11
+            }
+        ]
 
     def test_chain(self, web3):
         # given
@@ -199,6 +242,9 @@ class TestPlunger(TestPlungerUtils):
             with captured_output() as (out, err):
                 Plunger(args(f"--rpc-port 8545 --source jsonrpc_getblock --list {some_account}")).main()
 
+            with captured_output() as (json_out, err):
+                Plunger(args(f"--rpc-port 8545 --source jsonrpc_getblock --json --list {some_account}")).main()
+
         # then
         assert out.getvalue() == f"""There is 1 pending transaction on unknown from {some_account}:
 
@@ -207,3 +253,9 @@ class TestPlunger(TestPlungerUtils):
 0x124cb0887d0ea364b402fcc1369b7f9bf4d651bc77d2445aefbeab538dd3aab9      10
 
 """
+        assert json.loads(json_out.getvalue()) == [
+            {
+                'hash': '0x124cb0887d0ea364b402fcc1369b7f9bf4d651bc77d2445aefbeab538dd3aab9',
+                'nonce': 10
+            }
+        ]

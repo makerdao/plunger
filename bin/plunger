@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
 dir="$(dirname "$0")"/..
 source $dir/_virtualenv/bin/activate || exit
-export PYTHONPATH=$PYTHONPATH:$dir
+export PYTHONPATH=$PYTHONPATH:$dir:$dir/lib/pygasprice-client
 python3 -m plunger.plunger $@
