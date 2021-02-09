@@ -35,6 +35,7 @@ In order to clone the project and install required third-party packages please e
 ```
 git clone https://github.com/makerdao/plunger.git
 cd plunger
+git submodule update --init --recursive
 ./install.sh
 ```
 
