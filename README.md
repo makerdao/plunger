@@ -56,8 +56,11 @@ export LDFLAGS="-L$(brew --prefix openssl)/lib" CFLAGS="-I$(brew --prefix openss
 
 ```
 usage: plunger [-h] [--rpc-host RPC_HOST] [--rpc-port RPC_PORT]
-               [--gas-price GAS_PRICE] --source SOURCE
-               (--list | --wait | --override-with-zero-txs)
+               [--gas-price GAS_PRICE] --source SOURCE [-j]
+               (--list | --wait | --override-with-zero-txs) [-s]
+               [--ethgasstation-api-key ETHGASSTATION_API_KEY]
+               [--etherscan-api-key ETHERSCAN_API_KEY]
+               [--poanetwork-url POANETWORK_URL] [--eth-key ETH_KEY]
                address
 
 positional arguments:
@@ -70,12 +73,20 @@ optional arguments:
   --gas-price GAS_PRICE
                         Gas price (in Wei) for overriding transactions
   --source SOURCE       Comma-separated list of sources to use for pending
-                        transaction discovery (available: jsonrpc_getblock, 
-                        parity_txqueue)
+                        transaction discovery (available: parity_txqueue,
+                        jsonrpc_getblock)
+  -j, --json            Generate result as JSON
   --list                List pending transactions
   --wait                Wait for the pending transactions to clear
   --override-with-zero-txs
                         Override the pending transactions with zero-value txs
+  -s, --smart-gas       Use smart gas strategy to plunge
+  --ethgasstation-api-key ETHGASSTATION_API_KEY
+                        ethgasstation API key
+  --etherscan-api-key ETHERSCAN_API_KEY
+                        etherscan API key
+  --poanetwork-url POANETWORK_URL
+                        Alternative POANetwork URL
   --eth-key ETH_KEY     Ethereum private key to use (e.g.
                         'key_file=aaa.json,pass_file=aaa.pass') for unlocking
                         account
@@ -132,7 +143,13 @@ transactions; use `--eth-key` parameter to unlock the account.
 ### Gas price
 
 Gas price for overriding transactions can be specified using the `--gas-price` argument.
-If this argument is not present, _plunger_ will use the default gas price suggested by
+
+##### Smart gas price
+Pass `--smart-gas` argument for using an aggregator client which combines multiple gas price sources 
+to produce a single price. The gas price for overriding transaction is the fastest gas price determined by client * 1.1.  
+NOTE: Supply API keys to avoid rate limiting and exclusion of sources which require a key.
+                                                                                                         
+If `--gas-price` or `--smart-gas` arguments are not present, _plunger_ will use the default gas price suggested by
 the Ethereum node it is connected to.
 
 Bear in mind that the new gas price has to be at least 12.5% higher than the original one,
