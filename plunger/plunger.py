@@ -95,6 +95,8 @@ class Plunger:
                                          poa_network_alt_url=self.arguments.poanetwork_url,
                                          etherscan_api_key=self.arguments.etherscan_api_key,
                                          gasnow_app_name="makerdao/plunger")
+            # wait for gas price client to become available
+            time.sleep(5)
 
         self.validate_sources(self.web3)
 
