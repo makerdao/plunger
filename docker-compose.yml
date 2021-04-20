@@ -1,4 +1,5 @@
-version: "3.2"
+version: "3.6"
+
 services:
   parity-plunger:
     image: makerdao/testchain-pymaker:unit-testing
@@ -11,3 +12,22 @@ services:
       - "8546"
     user: root
     working_dir: /home/parity
+
+  plunger-list:
+    image: plunger
+    command: --rpc-host $ETH_RPC_URL --source parity_txqueue --list $ETH_FROM
+    environment:
+      - ETH_RPC_URL
+      - ETH_FROM
+
+  plunger-force:
+    image: plunger
+    command: |
+      --rpc-host $ETH_RPC_URL --source parity_txqueue --override-with-zero-txs \
+      --eth-key=key_file=/keystore/keystore.json \
+      --gas-price $GAS_PRICE $ETH_FROM
+    environment:
+      - ETH_RPC_URL
+      - ETH_FROM
+    volumes:
+      - ${KEYSTORE_DIR}:/keystore
