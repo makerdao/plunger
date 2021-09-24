@@ -2,7 +2,7 @@
 
 Tool helping to deal with Ethereum transactions stuck in the pool.
 
-[![Build Status](https://github.com/makerdao/plunger/actions/workflows/.github/workflows/tests.yaml/badge.svg?branch=master)](https://github.com/makerdao/plunger/actions)
+![Build Status](https://github.com/makerdao/plunger/actions/workflows/.github/workflows/tests.yaml/badge.svg?branch=master)
 [![codecov](https://codecov.io/gh/makerdao/plunger/branch/master/graph/badge.svg)](https://codecov.io/gh/makerdao/plunger)
 [![Code Climate](https://codeclimate.com/github/makerdao/plunger/badges/gpa.svg)](https://codeclimate.com/github/makerdao/plunger)
 [![Issue Count](https://codeclimate.com/github/makerdao/plunger/badges/issue_count.svg)](https://codeclimate.com/github/makerdao/plunger)
